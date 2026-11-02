@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { patientSchema, PatientFormData } from '@/lib/validations/patient.schema'
 import { createPatient, updatePatient } from '@/actions/patients.actions'
+import Link from 'next/link'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -46,6 +47,28 @@ export default function PatientForm({ initialData }: PatientFormProps) {
 
   const gender = watch('gender')
 
+  const name = watch('name')
+  const phone = watch('phone')
+  const [duplicates, setDuplicates] = useState<{ id: string; name: string; phone: string | null }[]>([])
+  const [duplicateError, setDuplicateError] = useState('')
+  useEffect(() => {
+    setDuplicates([])
+    setDuplicateError('')
+    if (initialData?.id || name.trim().length < 2 || !phone || phone.replace(/[^0-9]/g, '').length < 7) return
+    const controller = new AbortController()
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/patients/duplicates?${new URLSearchParams({ name, phone })}`, { signal: controller.signal, cache: 'no-store', redirect: 'error' })
+        if (!response.ok) throw new Error('Duplicate check unavailable. You can still save.')
+        const data = await response.json()
+        if (!controller.signal.aborted) setDuplicates(data)
+      } catch {
+        if (!controller.signal.aborted) setDuplicateError('Duplicate check unavailable. You can still save.')
+      }
+    }, 250)
+    return () => { clearTimeout(timer); controller.abort() }
+  }, [name, phone, initialData?.id])
+
   const onSubmit = async (data: PatientFormData) => {
     setIsLoading(true)
     setError(null)
@@ -65,6 +88,13 @@ export default function PatientForm({ initialData }: PatientFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-4 md:p-6 rounded-lg shadow-sm border">
+      {duplicates.length > 0 && (
+        <div role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+          <p className="font-medium">Possible duplicate patient. You can still save.</p>
+          {duplicates.map(patient => <Link key={patient.id} href={`/patients/${patient.id}`} className="flex min-h-11 items-center underline">{patient.name} · {patient.phone} — Open existing record</Link>)}
+        </div>
+      )}
+      {duplicateError && <p role="status" className="text-sm text-amber-700">{duplicateError}</p>}
       {error && <div className="text-red-500 text-sm font-medium">{error}</div>}
 
       <div className="space-y-2">

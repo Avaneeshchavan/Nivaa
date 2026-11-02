@@ -9,18 +9,24 @@ export async function getPatients(search?: string) {
   const doctor = await getCurrentDoctor()
   if (!doctor) throw new Error('Unauthorized')
 
+  const term = search?.trim().slice(0, 100)
+  const pattern = term ? `%${term.replace(/[\\%_]/g, '\\$&')}%` : ''
+  // Separate indexed branches avoid a correlated scan of every patient's history.
+  const matches = term ? await prisma.$queryRaw<{ id: string }[]>`
+    SELECT p.id FROM "Patient" p
+    WHERE p."doctorId" = ${doctor.id} AND p.id IN (
+      SELECT id FROM "Patient" WHERE "doctorId" = ${doctor.id} AND name ILIKE ${pattern}
+      UNION SELECT id FROM "Patient" WHERE "doctorId" = ${doctor.id} AND phone ILIKE ${pattern}
+      UNION SELECT "patientId" FROM "Visit" WHERE "doctorId" = ${doctor.id} AND diagnosis ILIKE ${pattern}
+      UNION SELECT "patientId" FROM "Prescription" WHERE "doctorId" = ${doctor.id} AND diagnosis ILIKE ${pattern}
+      UNION SELECT "patientId" FROM "Prescription" WHERE "doctorId" = ${doctor.id}
+        AND jsonb_path_query_array(medicines, '$[*].name')::text ILIKE ${pattern}
+    ) ORDER BY p."updatedAt" DESC LIMIT 50
+  ` : null
+
   const patients = await prisma.patient.findMany({
-    where: {
-      doctorId: doctor.id,
-      ...(search
-        ? {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { phone: { contains: search } },
-            ],
-          }
-        : {}),
-    },
+    where: { doctorId: doctor.id, ...(matches ? { id: { in: matches.map(p => p.id) } } : {}) },
+    take: 50,
     orderBy: { updatedAt: 'desc' },
     include: {
       visits: {
@@ -93,4 +99,18 @@ export async function updatePatient(id: string, data: PatientFormData) {
   revalidatePath('/patients')
   revalidatePath(`/patients/${id}`)
   return updatedPatient
+}
+
+export async function findDuplicatePatients(name: string, phone: string) {
+  const doctor = await getCurrentDoctor()
+  if (!doctor) throw new Error('Unauthorized')
+  const normalizedPhone = phone.replace(/[^0-9]/g, '')
+  if (name.trim().length < 2 || name.length > 160 || normalizedPhone.length < 7 || normalizedPhone.length > 15) return []
+  return prisma.$queryRaw<{ id: string; name: string; phone: string | null }[]>`
+    SELECT id, name, phone FROM "Patient"
+    WHERE "doctorId" = ${doctor.id}
+      AND regexp_replace(coalesce(phone, ''), '[^0-9]', '', 'g') = ${normalizedPhone}
+      AND public.nivaa_patient_name_similarity(name, ${name.trim()}) >= 0.35
+    ORDER BY public.nivaa_patient_name_similarity(name, ${name.trim()}) DESC LIMIT 5
+  `
 }

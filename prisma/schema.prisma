@@ -47,6 +47,10 @@ model Patient {
   doctor        Doctor         @relation(fields: [doctorId], references: [id])
   visits        Visit[]
   prescriptions Prescription[]
+
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Patient_name_trgm_idx")
+  @@index([phone(ops: raw("gin_trgm_ops"))], type: Gin, map: "Patient_phone_trgm_idx")
+  @@index([doctorId, updatedAt(sort: Desc)])
 }
 
 model Visit {
@@ -61,6 +65,9 @@ model Visit {
   patient       Patient        @relation(fields: [patientId], references: [id])
   doctor        Doctor         @relation(fields: [doctorId], references: [id])
   prescriptions Prescription[]
+
+  @@index([diagnosis(ops: raw("gin_trgm_ops"))], type: Gin, map: "Visit_diagnosis_trgm_idx")
+  @@index([doctorId, patientId])
 }
 
 model Prescription {
@@ -78,6 +85,9 @@ model Prescription {
   patient Patient @relation(fields: [patientId], references: [id])
   visit   Visit?  @relation(fields: [visitId], references: [id])
   doctor  Doctor  @relation(fields: [doctorId], references: [id])
+
+  @@index([diagnosis(ops: raw("gin_trgm_ops"))], type: Gin, map: "Prescription_diagnosis_trgm_idx")
+  @@index([doctorId, patientId])
 }
 
 model Medicine {

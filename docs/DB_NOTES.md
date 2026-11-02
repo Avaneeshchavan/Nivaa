@@ -24,10 +24,13 @@ Take a database backup first. The baseline must reflect the **actual** applicati
 ```sh
 npx prisma generate
 npx prisma migrate status
-npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+git show 2d1e12e:prisma/schema.prisma > /tmp/nivaa-baseline.prisma
+npx prisma migrate diff --from-config-datasource --to-schema /tmp/nivaa-baseline.prisma --exit-code
 ```
 
 `migrate status` may report the pending `0_init` migration. The diff must report no differences and exit **0**. Exit **2** means schema drift; exit **1** means an error. In either case, stop this baseline procedure and reconcile the schema before continuing. Do not accept a database reset. Review existing policies, triggers, extensions and unmanaged tables separately; Prisma schema diff does not represent every PostgreSQL feature.
+
+The comparison deliberately uses the schema recorded with `0_init`, since later tracked migrations change the current schema.
 
 Only after verifying the diff is empty and `0_init` is not already recorded as applied:
 
@@ -81,3 +84,14 @@ console.table(medicines)
 ```
 
 Expect paracetamol entries such as `Paracetamol 500 mg`. An anonymous request redirects to `/login` by design. After a recent empty search, use the no-store check above to avoid the API's five-minute private cache. For the custom-entry flow, search a new name, optionally enter strength/form, tap the 44px custom row, then enter the prescription details and tap Add to Prescription; repeat the same custom name/form and confirm it is reused.
+
+## Phase 2 migrations
+
+After resolving `0_init` on an existing database (or applying it to an empty database), apply subsequent migrations without resetting:
+
+```sh
+npx prisma migrate deploy
+npx prisma generate
+```
+
+The patient-search migration installs pg_trgm and indexes; the database migration role needs extension/index creation privileges. Use `docs/SEARCH_NOTES.md` to verify search after deployment. Do not resolve later feature migrations as already applied unless their SQL has actually been applied and verified.
