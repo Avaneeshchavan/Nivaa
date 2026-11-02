@@ -30,7 +30,6 @@ yarn-error.log*
 
 # env files
 .env*
-!.env.example
 
 # vercel
 .vercel
@@ -40,7 +39,4 @@ yarn-error.log*
 next-env.d.ts
 
 # prisma generated client
-/lib/generated/prisma
-
-# boilerplate subdirectory
-clinic-app/
+lib/generated/
