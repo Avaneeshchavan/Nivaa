@@ -21,6 +21,7 @@ export async function GET(
       where: { id },
       include: {
         patient: true,
+        visit: true,
       },
     })
 
@@ -34,6 +35,7 @@ export async function GET(
         doctor={doctor}
         patient={prescription.patient}
         prescription={prescription}
+        visit={prescription.visit}
         clinicName="Nivaa Clinic" // Can be fetched from doctor profile later
       />
     )

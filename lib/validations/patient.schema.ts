@@ -11,7 +11,7 @@ export const patientSchema = z.object({
     .or(z.literal(''))
     .nullable(),
   address: z.string().optional().nullable(),
-  allergies: z.string().optional().nullable(),
+  allergies: z.string().trim().max(2000).optional().nullable(),
 })
 
 export type PatientFormData = z.infer<typeof patientSchema>

@@ -3,48 +3,41 @@
 import prisma from '@/lib/prisma'
 import { getCurrentDoctor } from './auth.actions'
 import { revalidatePath } from 'next/cache'
-import { parseRxMedicines, type DuplicateRxDraft } from '@/lib/validations/prescription.schema'
-import { RxMedicine } from '@/stores/rxBuilderStore'
-
-interface CreatePrescriptionInput {
-  patientId: string
-  diagnosis: string
-  medicines: RxMedicine[]
-  notes: string
-}
+import { parseRxMedicines, prescriptionSchema, type CreatePrescriptionInput, type DuplicateRxDraft } from '@/lib/validations/prescription.schema'
 
 export async function createPrescription(data: CreatePrescriptionInput) {
   const doctor = await getCurrentDoctor()
   if (!doctor) throw new Error('Unauthorized')
 
+  const input = prescriptionSchema.parse(data)
+
   // First verify patient ownership
   const patient = await prisma.patient.findFirst({
-    where: { id: data.patientId, doctorId: doctor.id }
+    where: { id: input.patientId, doctorId: doctor.id }
   })
 
   if (!patient) throw new Error('Patient not found or unauthorized')
 
-  // Create a new visit automatically for this prescription
-  // Or attach to a new prescription directly. For our schema, visitId is optional on Prescription.
-  // We'll create a Visit to keep the timeline consistent.
+  // The visit and its new Rx are one write: no orphan visit if saving fails.
   const visit = await prisma.visit.create({
     data: {
       patientId: patient.id,
       doctorId: doctor.id,
-      diagnosis: data.diagnosis,
-    }
+      diagnosis: input.diagnosis,
+      ...input.visit,
+      prescriptions: {
+        create: {
+          patientId: patient.id,
+          doctorId: doctor.id,
+          diagnosis: input.diagnosis,
+          notes: input.notes,
+          medicines: input.medicines,
+        },
+      },
+    },
+    include: { prescriptions: true },
   })
-
-  const prescription = await prisma.prescription.create({
-    data: {
-      patientId: patient.id,
-      doctorId: doctor.id,
-      visitId: visit.id,
-      diagnosis: data.diagnosis,
-      notes: data.notes,
-      medicines: data.medicines as any, // Storing as JSON
-    }
-  })
+  const prescription = visit.prescriptions[0]
 
   revalidatePath(`/patients/${patient.id}`)
   revalidatePath('/patients')

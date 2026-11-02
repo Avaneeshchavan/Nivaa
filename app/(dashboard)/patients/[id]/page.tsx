@@ -1,4 +1,6 @@
 import { getPatient } from '@/actions/patients.actions'
+import AllergiesBanner from '@/components/patients/AllergiesBanner'
+import { formatVisitMeasurements } from '@/lib/validations/visit.schema'
 import HeaderSetter from '@/components/dashboard/HeaderSetter'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,6 +20,7 @@ export default async function PatientDetailsPage({
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <HeaderSetter title={patient.name} />
+      <AllergiesBanner allergies={patient.allergies} />
 
       {/* Top Section */}
       <Card className="border-none shadow-sm bg-white">
@@ -91,6 +94,7 @@ export default async function PatientDetailsPage({
                           <p className="text-gray-600 text-sm mt-1">
                             {visit.diagnosis || 'No diagnosis recorded'}
                           </p>
+                          {formatVisitMeasurements(visit) && <p className="text-sm text-gray-600 mt-1">{formatVisitMeasurements(visit)}</p>}
                         </div>
                       </div>
                       <div className="w-full sm:w-auto space-y-2">

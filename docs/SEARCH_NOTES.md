@@ -6,7 +6,7 @@ The migration enables `pg_trgm`, adds GIN indexes and doctor/relationship indexe
 
 ## Verification
 
-The baseline and search migration ran successfully on the embedded PostgreSQL engine already installed with Prisma tooling (no dependency added). A synthetic fixture with 10,000 patients, 30,000 visits and 30,000 prescriptions exercised the actual SQL from the action: name, phone, diagnosis, medicine-name-only matching, wildcard escaping, doctor isolation, and similar-name/same-phone duplicate detection passed. Sixty warm database-only samples measured p95 below 100ms on this machine. This excludes Supabase authentication, HTTP, rendering and the typing debounce and is not an end-to-end latency claim.
+The baseline and search migration ran successfully on the embedded PostgreSQL engine already installed with Prisma tooling (no dependency added). A synthetic fixture with 10,000 patients, 30,000 visits and 30,000 prescriptions exercised the actual SQL from the action: name, phone, diagnosis, medicine-name-only matching, wildcard escaping, doctor isolation, and similar-name/same-phone duplicate detection passed. Sixty warm database-only samples per run measured p95 of 72–102ms on this machine (including a run alongside the production build). This excludes Supabase authentication, HTTP, rendering and the typing debounce and is not an end-to-end latency claim.
 
 The configured clinic database previously returned XX000; real authenticated HTTP latency remains to be measured after valid DB access and migration deployment. With the app running locally and a doctor signed in, set NIVAA_SESSION_COOKIE privately to that browser's Cookie request header, then run representative fixture queries:
 

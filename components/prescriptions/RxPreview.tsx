@@ -8,7 +8,8 @@ import { FileText, Maximize2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog'
 import RxPDFDocument from './RxPDFDocument'
-import { Doctor, Patient, Prescription } from '@/lib/generated/prisma/client'
+import { visitFormSchema } from '@/lib/validations/visit.schema'
+import type { Patient } from '@/lib/generated/prisma/client'
 
 // Dynamically import PDFViewerWrapper to avoid SSR issues
 const PDFViewer = dynamic(
@@ -16,9 +17,9 @@ const PDFViewer = dynamic(
   { ssr: false, loading: () => <div className="animate-pulse bg-gray-100 w-full h-full min-h-[500px] flex items-center justify-center text-gray-400">Loading PDF Preview...</div> }
 )
 
-export default function RxPreview() {
+export default function RxPreview({ patient }: { patient?: Patient }) {
   const [mounted, setMounted] = useState(false)
-  const { diagnosis, medicines, notes } = useRxBuilderStore()
+  const { diagnosis, medicines, notes, visit } = useRxBuilderStore()
 
   useEffect(() => {
     setMounted(true)
@@ -26,7 +27,8 @@ export default function RxPreview() {
 
   // Mock objects for live preview
   const mockDoctor = { name: 'Doctor', email: 'doctor@nivaaclinic.com' }
-  const mockPatient = { name: 'Patient Name', dob: '1990-01-01', phone: '+1234567890', gender: 'MALE' }
+  const previewPatient = patient || { name: 'Select a patient', dob: null, phone: null, gender: null, allergies: null }
+  const measurements = visitFormSchema.safeParse(visit)
   const previewPrescription = {
     diagnosis,
     medicines,
@@ -35,16 +37,17 @@ export default function RxPreview() {
     id: 'DRAFT'
   }
 
-  const isEmpty = !diagnosis && medicines.length === 0 && !notes
+  const isEmpty = !patient && !diagnosis && medicines.length === 0 && !notes
 
   if (!mounted) return <div className="min-h-96 w-full bg-gray-50 animate-pulse rounded-lg" />
 
   const PDFComponent = (
     <PDFViewer className="w-full h-full min-h-[600px] border-0 rounded-lg">
       <RxPDFDocument 
-        doctor={mockDoctor as unknown as Doctor}
-        patient={mockPatient as unknown as Patient}
-        prescription={previewPrescription as unknown as Omit<Prescription, 'medicines'> & { medicines: unknown }}
+        doctor={mockDoctor}
+        patient={previewPatient}
+        visit={measurements.success ? measurements.data : undefined}
+        prescription={previewPrescription}
         clinicName="Nivaa Clinic"
       />
     </PDFViewer>

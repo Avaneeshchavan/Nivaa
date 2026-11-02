@@ -8,6 +8,7 @@ import { patientSchema, PatientFormData } from '@/lib/validations/patient.schema
 import { createPatient, updatePatient } from '@/actions/patients.actions'
 import Link from 'next/link'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import {
@@ -168,9 +169,10 @@ export default function PatientForm({ initialData }: PatientFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="allergies" className="text-base">Allergies / Medical Notes</Label>
-        <Input
+        <Label htmlFor="allergies" className="text-base">Allergies</Label>
+        <Textarea
           id="allergies"
+          maxLength={2000}
           placeholder="e.g. Penicillin, Peanuts"
           className="h-12 text-base"
           disabled={isLoading}

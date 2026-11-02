@@ -1,6 +1,6 @@
 /* eslint-disable jsx-a11y/alt-text */
 import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
-import { format } from 'date-fns'
+import { formatVisitMeasurements, type VisitMeasurements } from '@/lib/validations/visit.schema'
 import { Doctor, Patient, Prescription } from '@/lib/generated/prisma/client'
 
 // Define medicine shape stored in Prescription.medicines JSON
@@ -56,17 +56,21 @@ const styles = StyleSheet.create({
 })
 
 interface RxPDFProps {
-  doctor: Doctor
-  patient: Patient
-  prescription: Omit<Prescription, 'medicines'> & { medicines: unknown }
+  visit?: VisitMeasurements | null
+  doctor: Pick<Doctor, 'name' | 'email'>
+  patient: Pick<Patient, 'name' | 'dob' | 'gender' | 'phone' | 'allergies'>
+  prescription: Pick<Prescription, 'id' | 'createdAt' | 'diagnosis' | 'notes'> & { medicines: unknown }
   clinicName?: string
   logoUrl?: string
 }
 
-export default function RxPDFDocument({ doctor, patient, prescription, clinicName = 'Clinic Name', logoUrl }: RxPDFProps) {
+export default function RxPDFDocument({ doctor, patient, prescription, clinicName = 'Clinic Name', logoUrl, visit }: RxPDFProps) {
   const meds: RxMedicine[] = typeof prescription.medicines === 'string'
     ? JSON.parse(prescription.medicines as string)
     : (prescription.medicines as RxMedicine[] || [])
+  const rxDate = new Date(prescription.createdAt || new Date())
+  const dateText = rxDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' })
+  const timeText = rxDate.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })
   // Age
   let age = 'N/A'
   if (patient.dob) {
@@ -88,8 +92,8 @@ export default function RxPDFDocument({ doctor, patient, prescription, clinicNam
             <Text style={styles.doctorDetails}>{doctor.email}</Text>
           </View>
           <View style={styles.headerRight}>
-            <Text style={styles.doctorDetails}>Date: {format(new Date(prescription.createdAt || new Date()), 'dd MMM yyyy')}</Text>
-            <Text style={styles.doctorDetails}>Time: {format(new Date(prescription.createdAt || new Date()), 'hh:mm a')}</Text>
+            <Text style={styles.doctorDetails}>Date: {dateText}</Text>
+            <Text style={styles.doctorDetails}>Time: {timeText}</Text>
           </View>
         </View>
         {/* Patient */}
@@ -100,9 +104,11 @@ export default function RxPDFDocument({ doctor, patient, prescription, clinicNam
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text>Age/Gender: <Text style={styles.patientText}>{age} / {patient.gender || 'N/A'}</Text></Text>
-            <Text>Date: {format(new Date(), 'dd MMM yyyy')}</Text>
+            <Text>Date: {dateText}</Text>
           </View>
         </View>
+        {patient.allergies?.trim() && <Text style={{ color: '#991b1b', marginBottom: 8 }}>Allergies: {patient.allergies}</Text>}
+        {formatVisitMeasurements(visit) && <Text style={{ marginBottom: 10 }}>{formatVisitMeasurements(visit)}</Text>}
         {/* Diagnosis */}
         {prescription.diagnosis && (
           <View>
@@ -147,7 +153,7 @@ export default function RxPDFDocument({ doctor, patient, prescription, clinicNam
         <View style={styles.footer}>
           <View>
             <Text style={styles.footerText}>Digitally generated prescription</Text>
-            <Text style={styles.footerText}>Date: {format(new Date(), 'dd MMM yyyy')}</Text>
+            <Text style={styles.footerText}>Date: {dateText}</Text>
           </View>
           <View style={styles.signatureBox}>
             <View style={styles.signatureLine} />

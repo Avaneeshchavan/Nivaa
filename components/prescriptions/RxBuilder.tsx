@@ -8,6 +8,9 @@ import { DiseaseTemplate, Patient } from '@/lib/generated/prisma/client'
 import DiseaseTemplateSelector from './DiseaseTemplateSelector'
 import MedicineAutocomplete from './MedicineAutocomplete'
 import RxPreview from './RxPreview'
+import VisitFields from './VisitFields'
+import AllergiesBanner from '@/components/patients/AllergiesBanner'
+import { emptyVisitForm, visitFormSchema } from '@/lib/validations/visit.schema'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
@@ -26,6 +29,7 @@ interface RxBuilderProps {
 export default function RxBuilder({ initialPatientId, patients, templates, duplicate }: RxBuilderProps) {
   const router = useRouter()
   const { 
+    visit, setVisit,
     patientId, setPatientId, 
     diagnosis, setDiagnosis, 
     medicines, notes, setNotes, 
@@ -33,6 +37,8 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
   } = useRxBuilderStore()
 
   const [saving, setSaving] = useState(false)
+  const [visitError, setVisitError] = useState('')
+  const selectedPatient = patients.find(p => p.id === patientId)
 
   const [toast, setToast] = useState('')
   const [editingMedicine, setEditingMedicine] = useState<string | null>(null)
@@ -45,6 +51,7 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
       notes: duplicate?.notes || '',
       medicines: duplicate?.medicines.map(m => ({ ...m, id: crypto.randomUUID() })) || [],
       templateId: null,
+      visit: { ...emptyVisitForm },
     })
     if (duplicate) setToast('Prescription copied for today. Review and save as a new Rx.')
     return () => reset()
@@ -56,12 +63,19 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
       return
     }
 
+    const measurements = visitFormSchema.safeParse(visit)
+    if (!measurements.success) {
+      setVisitError(measurements.error.issues.map(issue => `${String(issue.path[0])}: ${issue.message}`).join(' · '))
+      return
+    }
+    setVisitError('')
     setSaving(true)
     try {
       const rx = await createPrescription({
         patientId,
         diagnosis,
         medicines,
+        visit: measurements.data,
         notes
       })
       
@@ -83,7 +97,8 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
       {/* LEFT PANEL: Form */}
       <div className="space-y-6 animate-in fade-in duration-300">
         
-        <p className="text-sm text-gray-600">{patients.find(p => p.id === patientId)?.name} · {new Date().toLocaleDateString('en-IN')}</p>
+        <AllergiesBanner allergies={selectedPatient?.allergies} />
+        <p className="text-sm text-gray-600">{selectedPatient?.name} · {new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
         {/* Patient Selection (If not pre-filled from URL) */}
         {!initialPatientId && (
           <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
@@ -103,6 +118,8 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
           </div>
         )}
 
+        <VisitFields value={visit} onChange={value => { setVisit(value); setVisitError('') }} />
+        {visitError && <p role="alert" className="text-red-600">{visitError}</p>}
         {/* Diagnosis & Templates */}
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
@@ -198,7 +215,7 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
 
       {/* RIGHT PANEL: Live Preview */}
       <div className="hidden md:block">
-        <RxPreview />
+        <RxPreview patient={selectedPatient} />
       </div>
 
     </div>

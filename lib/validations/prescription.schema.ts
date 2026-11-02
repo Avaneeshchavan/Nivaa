@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { visitSchema } from './visit.schema'
 
 export const rxMedicineSchema = z.object({
   id: z.string(),
@@ -22,3 +23,12 @@ export interface DuplicateRxDraft {
   medicines: z.output<typeof rxMedicineSchema>[]
   notes: string
 }
+
+export const prescriptionSchema = z.object({
+  patientId: z.string().min(1),
+  diagnosis: z.string().trim().max(4000),
+  medicines: z.array(rxMedicineSchema).max(100),
+  notes: z.string().max(8000),
+  visit: visitSchema.optional(),
+})
+export type CreatePrescriptionInput = z.input<typeof prescriptionSchema>

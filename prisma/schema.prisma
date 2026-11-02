@@ -54,6 +54,10 @@ model Patient {
 }
 
 model Visit {
+  weightKg      Float?
+  bloodPressure String?
+  temperatureC  Float?
+  spo2          Int?
   id        String   @id @default(cuid())
   patientId String
   doctorId  String

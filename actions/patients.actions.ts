@@ -2,7 +2,7 @@
 
 import prisma from '@/lib/prisma'
 import { getCurrentDoctor } from './auth.actions'
-import { PatientFormData } from '@/types'
+import { patientSchema, type PatientFormData } from '@/lib/validations/patient.schema'
 import { revalidatePath } from 'next/cache'
 
 export async function getPatients(search?: string) {
@@ -62,6 +62,7 @@ export async function getPatient(id: string) {
 }
 
 export async function createPatient(data: PatientFormData) {
+  data = patientSchema.parse(data)
   const doctor = await getCurrentDoctor()
   if (!doctor) throw new Error('Unauthorized')
 
@@ -78,6 +79,7 @@ export async function createPatient(data: PatientFormData) {
 }
 
 export async function updatePatient(id: string, data: PatientFormData) {
+  data = patientSchema.parse(data)
   const doctor = await getCurrentDoctor()
   if (!doctor) throw new Error('Unauthorized')
 

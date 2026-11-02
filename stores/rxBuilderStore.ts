@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { emptyVisitForm, type VisitFormValues } from '@/lib/validations/visit.schema'
 
 export interface RxMedicine {
   id: string
@@ -12,6 +13,8 @@ export interface RxMedicine {
 }
 
 interface RxBuilderState {
+  visit: VisitFormValues
+  setVisit: (visit: VisitFormValues) => void
   patientId: string | null
   diagnosis: string
   medicines: RxMedicine[]
@@ -30,6 +33,7 @@ interface RxBuilderState {
 }
 
 const initialState = {
+  visit: emptyVisitForm,
   patientId: null,
   diagnosis: '',
   medicines: [],
@@ -40,7 +44,8 @@ const initialState = {
 export const useRxBuilderStore = create<RxBuilderState>((set) => ({
   ...initialState,
 
-  setPatientId: (id) => set({ patientId: id }),
+  setVisit: (visit) => set({ visit }),
+  setPatientId: (id) => set(state => ({ patientId: id, ...(id !== state.patientId ? { visit: { ...emptyVisitForm } } : {}) })),
   setDiagnosis: (diagnosis) => set({ diagnosis }),
   
   addMedicine: (medicine) => 

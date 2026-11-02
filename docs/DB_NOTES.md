@@ -95,3 +95,7 @@ npx prisma generate
 ```
 
 The patient-search migration installs pg_trgm and indexes; the database migration role needs extension/index creation privileges. Use `docs/SEARCH_NOTES.md` to verify search after deployment. Do not resolve later feature migrations as already applied unless their SQL has actually been applied and verified.
+
+The visit-measurement migration adds nullable `weightKg`, `bloodPressure`, `temperatureC`, and `spo2` columns. Existing rows are left NULL. `Patient.allergies` already exists and is reused. Apply the migrations before starting this version of the app. Measurements are optional, checked on both client and server, and printed only when filled. A duplicated Rx copies medicines, diagnosis and notes; measurements start empty for the new visit. New Rx timestamps are generated on save, and printed dates use Asia/Kolkata.
+
+Verification on local embedded PostgreSQL confirmed old visit values remain NULL after migration and filled measurements round-trip. Schema checks covered omitted/invalid values and allergy text; PDFs rendered for both filled and empty measurements with conditional headers. The hosted clinic database migrations and authenticated workflows remain pending valid database access.
