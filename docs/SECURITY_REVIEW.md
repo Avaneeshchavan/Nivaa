@@ -16,7 +16,7 @@ Severity: Critical = potential bulk medical-data exposure/modification or server
 
 **Concrete fix:** since this app uses Prisma for all application data, enable RLS and explicitly deny direct API access to all six tables; revoke browser-role/PUBLIC privileges and add a restrictive deny policy so an existing permissive policy cannot reopen access. Protect Prisma migration metadata too. Retain server action ownership checks: the current administrative Prisma connection bypasses RLS. Disable the Data API in the dashboard if unused, or remove application tables from exposed schemas. Do not introduce broad `authenticated USING (true)` policies.
 
-**Status:** fixed in tracked migration `202611030003_private_application_tables/migration.sql:1`; production application and metadata checks still pending working DB access. `node scripts/check-database-isolation.mjs` reproduces the original exposure and verifies SELECT/INSERT/UPDATE/DELETE/TRUNCATE denial on all seven tables, restrictive RLS despite a permissive policy/restored DML grants, and retained trusted-server access. This uses the already installed PGlite test engine and synthetic data.
+**Status:** fixed in tracked migration `prisma/migrations/202611030003_private_application_tables/migration.sql:1`; production application and metadata checks still pending working DB access. `node scripts/check-database-isolation.mjs` reproduces the original exposure and verifies SELECT/INSERT/UPDATE/DELETE/TRUNCATE denial on all seven tables, restrictive RLS despite a permissive policy/restored DML grants, and retained trusted-server access. This uses the already installed PGlite test engine and synthetic data.
 
 ### C2 — Critical: prescription PDFs are designed for public URLs
 
@@ -26,17 +26,17 @@ Severity: Critical = potential bulk medical-data exposure/modification or server
 
 **Concrete fix:** make the bucket private, constrain Storage reads/writes to the authenticated user's UUID folder and object owner (both `USING` and `WITH CHECK`, with a restrictive guard against old broad policies), stop generating/persisting public URLs, and continue serving through the authenticated PDF route with no-store headers. Filter the Rx query by doctor and validate related patient/visit ownership before rendering. No signed URL is needed for the existing direct-response workflow; any future sharing must authorize ownership first and use short-lived signed URLs. Old public links must be tested after privacy changes; account for previously cached/downloaded copies.
 
-**Status:** fixed in `202611030004_private_prescription_storage/migration.sql:1` and the PDF handler. New files use Auth UUID folders with object-owner checks; old CUID folders are preserved but quarantined from API users (the authorized route can regenerate them). Public `pdfUrl` metadata is cleared and no public/signed bearer URL is generated. Storage still permits authenticated users to manage their own UUID folder; Doctor admission/abuse controls remain H1/H5. The bucket guard prevents browser roles changing this bucket to public. Local SQL tests cover anonymous and two-owner read/write isolation even with old broad policies, and the actual handler test covers anonymous, foreign doctor/patient/visit, no-store and upload-failure fallback. Dashboard privacy, cached copies and deployed two-doctor tests remain pending.
+**Status:** fixed in `prisma/migrations/202611030004_private_prescription_storage/migration.sql:1` and the PDF handler. New files use Auth UUID folders with object-owner checks; old CUID folders are preserved but quarantined from API users (the authorized route can regenerate them). Public `pdfUrl` metadata is cleared and no public/signed bearer URL is generated. Storage still permits authenticated users to manage their own UUID folder; Doctor admission/abuse controls remain H1/H5. The bucket guard prevents browser roles changing this bucket to public. Local SQL tests cover anonymous and two-owner read/write isolation even with old broad policies, and the actual handler test covers anonymous, foreign doctor/patient/visit, no-store and upload-failure fallback. Dashboard privacy, cached copies and deployed two-doctor tests remain pending.
 
 ### C3 — Critical: installed Next.js/image processor has published RCE advisories
 
-**Evidence:** `package.json:27` / `package-lock.json:9068` pin the installed Next.js to 15.5.18; `package-lock.json:10824` installs sharp 0.34.5. `middleware.ts:55` exempts the image optimizer and `next.config.ts:3` leaves defaults enabled. npm audit reports Next.js Critical findings, including [SVG image optimization RCE](https://github.com/vercel/next.js/security/advisories/GHSA-2464-fhr4-w9xw) (patched in 15.5.28 with sharp >=0.35.5).
+**Evidence:** `package.json:26` / `package-lock.json:9068` pin the installed Next.js to 15.5.18; `package-lock.json:10824` installs sharp 0.34.5. `middleware.ts:55` exempts the image optimizer and `next.config.ts:3` leaves defaults enabled. npm audit reports Next.js Critical findings, including [SVG image optimization RCE](https://github.com/vercel/next.js/security/advisories/GHSA-2464-fhr4-w9xw) (patched in 15.5.28 with sharp >=0.35.5).
 
 **Impact/condition:** the SVG advisory affects glibc Linux image processing. Actual exploitability depends on hosting/runtime and attacker-controlled image input; no hostile-image exploit was run and this repo does not enable arbitrary remote image hosts. Other Critical advisories affect AVIF processing and Windows hosting (Windows does not match the stated Vercel deployment). Treat the installed vulnerable framework as a release blocker rather than assuming a platform mitigation.
 
 **Concrete fix:** update the existing Next.js dependency to the patched 15.5.28 release and regenerate its lockfile dependency tree; confirm sharp >=0.35.5, run type/build/auth checks, redeploy all active environments. Do not run broad `npm audit fix --force` or upgrade unrelated packages.
 
-**Status:** remediation pending.
+**Status:** updated to Next.js 15.5.28 and its existing sharp dependency to 0.35.5. A Next-only install retained sharp 0.34.5; a targeted `npm update sharp` was needed. Only Next/sharp and their required/platform dependency trees changed; no new direct dependency. Final validation below.
 
 ### H1 — High: doctor admission depends only on a provisioned database row
 
@@ -131,7 +131,7 @@ Severity: Critical = potential bulk medical-data exposure/modification or server
 | Medicine API/custom action | Doctor required. Medicine intentionally has no doctorId: shared non-patient catalog. Custom input bounded, upsert preserves existing record. Do not put patient information in medicine names. |
 | PDF route | Auth + prescription owner check precedes render/response; C2 fixes Storage/public delivery and strengthens relation checks. |
 | Supabase browser access | Auth and logo upload only; no browser query of application tables. This supports C1's deny-all Data API policy without breaking ordinary Prisma data flows. |
-| Env/secrets | `.env` and `.env.local` ignored; only placeholder `.env.example` tracked. Pattern scan found no real credential in tracked files; reachable history contains no other env path. No service-role key used in client code. This is not proof of absence in GitHub settings, old dangling objects, logs or external copies. Server-only DB credentials and separate preview/project env scopes must be verified in Vercel. |
+| Env/secrets | `.env` and `.env.local` ignored; only placeholder `.env.example` tracked. Pattern scan found no real credential in tracked files; reachable history contains no other env path; a pattern scan of 144 reachable text blobs found no credential-pattern matches. No service-role key used in client code. This is not proof of absence in GitHub settings, old dangling objects, logs or external copies. Server-only DB credentials and separate preview/project env scopes must be verified in Vercel. |
 
 ## Dashboard / deployment actions for the owner
 
@@ -166,3 +166,20 @@ Expected after fixes: all six application tables RLS-enabled and no browser SELE
 - npm audit succeeded after retrying outside the restricted network; no dependency changes made by the audit itself.
 - Installed Next 15.5.18 has no `node_modules/next/dist/docs/` folder required by AGENTS; consulted [official Next.js 15 data-security guidance](https://nextjs.org/docs/15/app/guides/data-security) instead. Server Actions must authorize independently; hiding action IDs or relying on middleware is insufficient.
 - Existing unstaged Phase 0 TASKS change and untracked `docs/STATUS.md` are preserved, not included in review commits.
+
+### Final dependency results
+
+After C3, `npm audit --omit=dev` reports 30 affected package entries: 1 upstream Critical (proxy-addr, CLI-only reachability described in M5), 17 High, 10 Moderate and 2 Low. Sharp has no reported advisory; Next is now marked Moderate through its bundled PostCSS, with no direct Next Critical advisory. High/Medium dependency findings remain intentionally unfixed. The audit is not clean.
+
+The Next/sharp patch refresh also adds platform-specific optional packages to the lockfile; it adds no application capability or direct dependency. Reproduce with `npm ci` on the deployment platform and do not discard the lockfile.
+
+### Final local checks
+
+- `npx tsc --noEmit` — passed after the final dependency update.
+- `npm run build` — passed on Next.js 15.5.28. The first patched build could not download the existing Google fonts under restricted networking; the network-enabled build passed.
+- `node scripts/check-database-isolation.mjs` — passed.
+- `node scripts/check-prescription-storage.mjs` — passed. This simulates Supabase's schema/roles/JWT subject in local PostgreSQL; it does not exercise the hosted Storage service or CDN.
+- `node scripts/check-pdf-security.cjs` — passed against the actual handler with mocked Auth/Prisma/Storage/render boundaries.
+- `node scripts/check-auth-redirect.mjs http://127.0.0.1:3107` — passed against the final production build, plus anonymous PDF/duplicate-check redirects and public login.
+- A synthetic native-image encode/decode succeeded with sharp 0.35.5.
+- Production migration deployment, authenticated real-account tests, old public URL/cache checks, dashboard settings and restore drills remain **pending**. No live data/settings were changed.
