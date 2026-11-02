@@ -73,9 +73,9 @@ export default async function PatientDetailsPage({
           ) : (
             <div className="space-y-4">
               {patient.visits.map((visit) => {
-                const latestPrescription = [...visit.prescriptions].sort(
+                const prescriptions = [...visit.prescriptions].sort(
                   (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
-                )[0]
+                )
 
                 return (
                   <Card key={visit.id} className="shadow-sm">
@@ -93,20 +93,20 @@ export default async function PatientDetailsPage({
                           </p>
                         </div>
                       </div>
-                      {latestPrescription ? (
-                        <a
-                          href={`/api/prescriptions/${latestPrescription.id}/pdf`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={buttonVariants({ variant: 'secondary', className: 'w-full sm:w-auto mt-2 sm:mt-0' })}
-                        >
-                          View Rx
-                        </a>
-                      ) : (
-                        <Button variant="secondary" className="w-full sm:w-auto mt-2 sm:mt-0" disabled>
-                          No Rx
-                        </Button>
-                      )}
+                      <div className="w-full sm:w-auto space-y-2">
+                        {prescriptions.length ? prescriptions.map((rx, index) => (
+                          <div key={rx.id} className="flex flex-wrap gap-2">
+                            <a href={`/api/prescriptions/${rx.id}/pdf`} target="_blank" rel="noopener noreferrer"
+                              className={buttonVariants({ variant: 'secondary', className: 'min-h-11' })}>
+                              View Rx{prescriptions.length > 1 ? ` ${index + 1}` : ''}
+                            </a>
+                            <Link href={`/prescriptions/new?duplicateId=${rx.id}`}
+                              className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>
+                              Duplicate as new Rx
+                            </Link>
+                          </div>
+                        )) : <Button variant="secondary" className="min-h-11" disabled>No Rx</Button>}
+                      </div>
                     </CardContent>
                   </Card>
                 )

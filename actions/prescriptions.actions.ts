@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma'
 import { getCurrentDoctor } from './auth.actions'
 import { revalidatePath } from 'next/cache'
+import { parseRxMedicines, type DuplicateRxDraft } from '@/lib/validations/prescription.schema'
 import { RxMedicine } from '@/stores/rxBuilderStore'
 
 interface CreatePrescriptionInput {
@@ -49,4 +50,20 @@ export async function createPrescription(data: CreatePrescriptionInput) {
   revalidatePath('/patients')
   
   return prescription
+}
+
+export async function getPrescriptionForDuplicate(id: string): Promise<DuplicateRxDraft | null> {
+  const doctor = await getCurrentDoctor()
+  if (!doctor) throw new Error('Unauthorized')
+  const source = await prisma.prescription.findFirst({
+    where: { id, doctorId: doctor.id, patient: { doctorId: doctor.id } },
+  })
+  if (!source) return null
+  return {
+    sourceId: source.id,
+    patientId: source.patientId,
+    diagnosis: source.diagnosis || '',
+    medicines: parseRxMedicines(source.medicines),
+    notes: source.notes || '',
+  }
 }

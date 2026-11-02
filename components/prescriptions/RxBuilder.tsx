@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRxBuilderStore } from '@/stores/rxBuilderStore'
 import { createPrescription } from '@/actions/prescriptions.actions'
@@ -11,16 +11,19 @@ import RxPreview from './RxPreview'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import Toast from '@/components/ui/Toast'
+import type { DuplicateRxDraft } from '@/lib/validations/prescription.schema'
 import { Printer, Save } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface RxBuilderProps {
+  duplicate?: DuplicateRxDraft | null
   initialPatientId?: string
   patients: Patient[]
   templates: DiseaseTemplate[]
 }
 
-export default function RxBuilder({ initialPatientId, patients, templates }: RxBuilderProps) {
+export default function RxBuilder({ initialPatientId, patients, templates, duplicate }: RxBuilderProps) {
   const router = useRouter()
   const { 
     patientId, setPatientId, 
@@ -31,17 +34,21 @@ export default function RxBuilder({ initialPatientId, patients, templates }: RxB
 
   const [saving, setSaving] = useState(false)
 
-  // Initialize patient from URL if present
-  useEffect(() => {
-    if (initialPatientId) {
-      setPatientId(initialPatientId)
-    }
-  }, [initialPatientId, setPatientId])
+  const [toast, setToast] = useState('')
+  const [editingMedicine, setEditingMedicine] = useState<string | null>(null)
+  const dismissToast = useCallback(() => setToast(''), [])
 
-  // Cleanup on unmount
   useEffect(() => {
+    useRxBuilderStore.setState({
+      patientId: initialPatientId || null,
+      diagnosis: duplicate?.diagnosis || '',
+      notes: duplicate?.notes || '',
+      medicines: duplicate?.medicines.map(m => ({ ...m, id: crypto.randomUUID() })) || [],
+      templateId: null,
+    })
+    if (duplicate) setToast('Prescription copied for today. Review and save as a new Rx.')
     return () => reset()
-  }, [reset])
+  }, [initialPatientId, duplicate, reset])
 
   const handleSave = async (print: boolean) => {
     if (!patientId) {
@@ -72,9 +79,11 @@ export default function RxBuilder({ initialPatientId, patients, templates }: RxB
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full pb-20 md:pb-0">
       
+      {toast && <Toast message={toast} onDismiss={dismissToast} />}
       {/* LEFT PANEL: Form */}
       <div className="space-y-6 animate-in fade-in duration-300">
         
+        <p className="text-sm text-gray-600">{patients.find(p => p.id === patientId)?.name} · {new Date().toLocaleDateString('en-IN')}</p>
         {/* Patient Selection (If not pre-filled from URL) */}
         {!initialPatientId && (
           <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
@@ -114,7 +123,7 @@ export default function RxBuilder({ initialPatientId, patients, templates }: RxB
           
           <div className="space-y-3">
             {medicines.map((med, idx) => (
-              <div key={med.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex justify-between items-start gap-4 animate-in slide-in-from-bottom-2">
+              <div key={med.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex flex-wrap justify-between items-start gap-4 animate-in slide-in-from-bottom-2">
                 <div className="flex-1">
                   <h4 className="font-semibold text-gray-900">{idx + 1}. {med.name}</h4>
                   <div className="text-sm text-gray-600 flex flex-wrap gap-x-3 mt-1">
@@ -125,14 +134,26 @@ export default function RxBuilder({ initialPatientId, patients, templates }: RxB
                     <span>{med.duration}</span>
                   </div>
                 </div>
-                <Button 
+                <Button variant="outline" className="min-h-11" onClick={() => setEditingMedicine(editingMedicine === med.id ? null : med.id)}>
+                  {editingMedicine === med.id ? 'Done' : 'Edit'}
+                </Button>
+                <Button
                   variant="ghost" 
                   size="sm" 
-                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                  className="min-h-11 text-red-500 hover:text-red-700 hover:bg-red-50"
                   onClick={() => useRxBuilderStore.getState().removeMedicine(med.id)}
                 >
                   Remove
                 </Button>
+                {editingMedicine === med.id && (
+                  <div className="grid grid-cols-2 gap-3 w-full">
+                    {(['name', 'dosage', 'frequency', 'duration', 'instructions'] as const).map(field => (
+                      <label key={field} className="text-sm capitalize">{field}
+                        <Input className="h-12 mt-1" value={med[field]} onChange={e => useRxBuilderStore.getState().updateMedicine(med.id, { [field]: e.target.value })} />
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
