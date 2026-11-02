@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { renderToStream } from '@react-pdf/renderer'
 import RxPDFDocument from '@/components/prescriptions/RxPDFDocument'
 
+const privateHeaders = { 'Cache-Control': 'private, no-store', 'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff' }
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -12,21 +14,22 @@ export async function GET(
   try {
     const doctor = await getCurrentDoctor()
     if (!doctor) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: privateHeaders })
     }
 
     const { id } = await params
 
-    const prescription = await prisma.prescription.findUnique({
-      where: { id },
+    const prescription = await prisma.prescription.findFirst({
+      where: { id, doctorId: doctor.id, patient: { doctorId: doctor.id } },
       include: {
         patient: true,
         visit: true,
       },
     })
 
-    if (!prescription || prescription.doctorId !== doctor.id) {
-      return NextResponse.json({ error: 'Not found or unauthorized' }, { status: 404 })
+    if (!prescription || prescription.doctorId !== doctor.id || prescription.patient.doctorId !== doctor.id ||
+      (prescription.visit && (prescription.visit.doctorId !== doctor.id || prescription.visit.patientId !== prescription.patientId))) {
+      return NextResponse.json({ error: 'Not found or unauthorized' }, { status: 404, headers: privateHeaders })
     }
 
     // Render PDF to stream
@@ -49,43 +52,33 @@ export async function GET(
 
     // Upload to Supabase Storage
     const supabase = await createClient()
-    const filePath = `${doctor.id}/${prescription.id}.pdf`
+    // Storage policies match the verified Auth UUID, not the internal Doctor CUID.
+    const filePath = `${doctor.supabaseId}/${prescription.id}.pdf`
 
     const { error: uploadError } = await supabase.storage
       .from('prescriptions')
       .upload(filePath, pdfBuffer, {
         contentType: 'application/pdf',
+        cacheControl: '0',
         upsert: true,
       })
 
     if (uploadError) {
-      console.error('Error uploading PDF to Supabase:', uploadError)
+      console.error('Prescription PDF archive upload failed')
       // Continue anyway, we can still serve the PDF to the doctor
-    } else {
-      // Get public URL
-      const { data: publicUrlData } = supabase.storage
-        .from('prescriptions')
-        .getPublicUrl(filePath)
-        
-      if (publicUrlData?.publicUrl) {
-        // Update DB
-        await prisma.prescription.update({
-          where: { id: prescription.id },
-          data: { pdfUrl: publicUrlData.publicUrl },
-        })
-      }
     }
 
     // Return the PDF directly
     return new NextResponse(pdfBuffer, {
       headers: {
+        ...privateHeaders,
         'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="prescription-${prescription.id}.pdf"`,
       },
     })
 
-  } catch (error) {
-    console.error('Error generating PDF:', error)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+  } catch {
+    console.error('Prescription PDF generation failed')
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: privateHeaders })
   }
 }
