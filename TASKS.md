@@ -3,10 +3,10 @@
 - [x] 0.1 `git init` INSIDE Nivaa root, .gitignore (.env*, node_modules, .next), initial commit. Delete orphan `clinic-app/`. Done when `git status` clean and build passes.
 - [ ] 0.2 Write docs/STATUS.md summarizing repo vs Claude_Context_State.md; list anything that differs.
 ## Phase 1 - Blockers (Sol, medium)
-- [ ] 1.1 middleware.ts: protect /patients, /prescriptions, /settings, /templates (all non-login routes). Test: logged-out request to /settings redirects to /login.
-- [ ] 1.2 app/page.tsx: redirect to /patients (or /login if no session).
-- [ ] 1.3 Sidebar: fix /templates 404 (create a /templates page reusing the settings template manager OR repoint).
-- [ ] 1.4 Patient history "View Rx": link to /api/prescriptions/[id]/pdf (target _blank); handle visits with no Rx.
+- [x] 1.1 middleware.ts: protect /patients, /prescriptions, /settings, /templates (all non-login routes). Test: logged-out request to /settings redirects to /login.
+- [x] 1.2 app/page.tsx: redirect to /patients (or /login if no session).
+- [x] 1.3 Sidebar: fix /templates 404 (create a /templates page reusing the settings template manager OR repoint).
+- [x] 1.4 Patient history "View Rx": link to /api/prescriptions/[id]/pdf (target _blank); handle visits with no Rx.
 - [ ] 1.5 MedicineAutocomplete: allow adding a custom medicine when no match; persist it to Medicine table.
 - [ ] 1.6 prisma/seed.ts: 150+ common Indian generic/brand medicines (antibiotics, analgesics, antipyretics, antihypertensives, antidiabetics, antacids, antihistamines, cough/cold, vitamins) with strength+form. Add `prisma db seed` config. List any entry you're unsure of in docs/MED_REVIEW.md for the doctor to verify (do not guess dosages).
 - [ ] 1.7 package.json "postinstall": "prisma generate". Switch from `db push` to tracked migrations (`prisma migrate dev --name init`).

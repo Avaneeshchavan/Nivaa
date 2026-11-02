@@ -1,6 +1,6 @@
 import { getPatient } from '@/actions/patients.actions'
 import HeaderSetter from '@/components/dashboard/HeaderSetter'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { format } from 'date-fns'
@@ -72,30 +72,45 @@ export default async function PatientDetailsPage({
             </div>
           ) : (
             <div className="space-y-4">
-              {patient.visits.map((visit) => (
-                <Card key={visit.id} className="shadow-sm">
-                  <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="flex gap-4">
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Activity className="w-6 h-6 text-primary" />
+              {patient.visits.map((visit) => {
+                const latestPrescription = [...visit.prescriptions].sort(
+                  (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+                )[0]
+
+                return (
+                  <Card key={visit.id} className="shadow-sm">
+                    <CardContent className="p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div className="flex gap-4">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Activity className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">
+                            {format(new Date(visit.date), 'MMMM d, yyyy')}
+                          </p>
+                          <p className="text-gray-600 text-sm mt-1">
+                            {visit.diagnosis || 'No diagnosis recorded'}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">
-                          {format(new Date(visit.date), 'MMMM d, yyyy')}
-                        </p>
-                        <p className="text-gray-600 text-sm mt-1">
-                          {visit.diagnosis || 'No diagnosis recorded'}
-                        </p>
-                      </div>
-                    </div>
-                    {visit.prescriptions.length > 0 && (
-                      <Button variant="secondary" className="w-full sm:w-auto mt-2 sm:mt-0">
-                        View Rx
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                      {latestPrescription ? (
+                        <a
+                          href={`/api/prescriptions/${latestPrescription.id}/pdf`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={buttonVariants({ variant: 'secondary', className: 'w-full sm:w-auto mt-2 sm:mt-0' })}
+                        >
+                          View Rx
+                        </a>
+                      ) : (
+                        <Button variant="secondary" className="w-full sm:w-auto mt-2 sm:mt-0" disabled>
+                          No Rx
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </TabsContent>
