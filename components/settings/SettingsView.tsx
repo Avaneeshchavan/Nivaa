@@ -27,14 +27,15 @@ import { Plus, Trash2, Edit, Upload, Sparkles, AlertCircle, ChevronsUpDown, Hear
 interface SettingsViewProps {
   initialDoctor: Doctor | null
   initialTemplates: DiseaseTemplate[]
+  initialTab?: 'profile' | 'templates'
 }
 
-export default function SettingsView({ initialDoctor, initialTemplates }: SettingsViewProps) {
+export default function SettingsView({ initialDoctor, initialTemplates, initialTab = 'profile' }: SettingsViewProps) {
   const router = useRouter()
   const supabase = createClient()
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<'profile' | 'templates'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'templates'>(initialTab)
 
   // Doctor Form State
   const [doctor, setDoctor] = useState<Doctor | null>(initialDoctor)
