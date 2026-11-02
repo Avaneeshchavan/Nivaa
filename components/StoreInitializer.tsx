@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import { useClinicStore } from '@/store/clinicStore'
+import { useEffect } from 'react'
+import { useClinicStore } from '@/stores/clinicStore'
 
 interface StoreInitializerProps {
   doctorName?: string | null
@@ -14,14 +14,14 @@ export default function StoreInitializer({
   clinicName,
   logoUrl,
 }: StoreInitializerProps) {
-  const initialized = useRef(false)
   const setClinicData = useClinicStore((state) => state.setClinicData)
 
   useEffect(() => {
-    if (!initialized.current) {
-      setClinicData({ doctorName, clinicName, logoUrl })
-      initialized.current = true
-    }
+    setClinicData({
+      doctorName: doctorName ?? null,
+      clinicName: clinicName ?? null,
+      logoUrl: logoUrl ?? null,
+    })
   }, [doctorName, clinicName, logoUrl, setClinicData])
 
   return null

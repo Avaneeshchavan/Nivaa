@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Users, FileText, ClipboardList, Settings, LogOut } from 'lucide-react'
-import { useClinicStore } from '@/store/clinicStore'
+import { useClinicStore } from '@/stores/clinicStore'
 import { signOut } from '@/actions/auth.actions'
 import { Button } from '@/components/ui/button'
 

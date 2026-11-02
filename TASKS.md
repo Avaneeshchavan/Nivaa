@@ -7,10 +7,10 @@
 - [x] 1.2 app/page.tsx: redirect to /patients (or /login if no session).
 - [x] 1.3 Sidebar: fix /templates 404 (create a /templates page reusing the settings template manager OR repoint).
 - [x] 1.4 Patient history "View Rx": link to /api/prescriptions/[id]/pdf (target _blank); handle visits with no Rx.
-- [ ] 1.5 MedicineAutocomplete: allow adding a custom medicine when no match; persist it to Medicine table.
-- [ ] 1.6 prisma/seed.ts: 150+ common Indian generic/brand medicines (antibiotics, analgesics, antipyretics, antihypertensives, antidiabetics, antacids, antihistamines, cough/cold, vitamins) with strength+form. Add `prisma db seed` config. List any entry you're unsure of in docs/MED_REVIEW.md for the doctor to verify (do not guess dosages).
-- [ ] 1.7 package.json "postinstall": "prisma generate". Switch from `db push` to tracked migrations (`prisma migrate dev --name init`).
-- [ ] 1.8 Fix StoreInitializer props (clinicName, logoUrl); merge store/ into stores/.
+- [x] 1.5 MedicineAutocomplete: allow adding a custom medicine when no match; persist it to Medicine table.
+- [x] 1.6 prisma/seed.ts: 150+ common Indian generic/brand medicines (antibiotics, analgesics, antipyretics, antihypertensives, antidiabetics, antacids, antihistamines, cough/cold, vitamins) with strength+form. Add `prisma db seed` config. List any entry you're unsure of in docs/MED_REVIEW.md for the doctor to verify (do not guess dosages). (Seed code verified; live seed and HTTP check pending database access; see docs/DB_NOTES.md.)
+- [x] 1.7 package.json "postinstall": "prisma generate". Switch from `db push` to tracked migrations (`prisma migrate dev --name init`). (Baseline tracked; remote resolve pending database access; see docs/DB_NOTES.md.)
+- [x] 1.8 Fix StoreInitializer props (clinicName, logoUrl); merge store/ into stores/.
 ## Phase 2 - Doctor-workflow features (Sol, medium)
 - [ ] 2.1 Rx history: re-open a past Rx, "Duplicate as new Rx" (big time saver for repeat patients).
 - [ ] 2.2 Patient search: add phone, diagnosis, medicine search; pg_trgm; duplicate-patient warning (similar name + same phone).

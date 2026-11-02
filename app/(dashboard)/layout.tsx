@@ -19,7 +19,11 @@ export default async function DashboardLayout({
 
   return (
     <HeaderProvider>
-      <StoreInitializer doctorName={doctor?.name} />
+      <StoreInitializer
+        doctorName={doctor?.name}
+        clinicName={doctor?.clinicName}
+        logoUrl={doctor?.logoUrl}
+      />
       
       <div className="flex h-screen bg-gray-50 overflow-hidden">
         {/* Sidebar (iPad & Desktop) */}
