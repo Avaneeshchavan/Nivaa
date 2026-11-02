@@ -1,12 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { ChevronsUpDown, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -20,7 +19,8 @@ import {
 import { useRxBuilderStore } from '@/stores/rxBuilderStore'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Medicine } from '@/lib/generated/prisma/client'
+import { createCustomMedicine } from '@/actions/medicines.actions'
+import type { Medicine } from '@/lib/generated/prisma/client'
 
 export default function MedicineAutocomplete() {
   const [open, setOpen] = useState(false)
@@ -29,9 +29,15 @@ export default function MedicineAutocomplete() {
   const [loading, setLoading] = useState(false)
   const [selectedMed, setSelectedMed] = useState<Medicine | null>(null)
 
+  const [strength, setStrength] = useState('')
+  const [form, setForm] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const searchVersion = useRef(0)
+
   const addMedicine = useRxBuilderStore((state) => state.addMedicine)
 
-  const fetchMedicines = useDebouncedCallback(async (query: string) => {
+  const fetchMedicines = useDebouncedCallback(async (query: string, version: number) => {
     if (!query) {
       setMedicines([])
       return
@@ -40,17 +46,38 @@ export default function MedicineAutocomplete() {
     try {
       const res = await fetch(`/api/medicines?q=${encodeURIComponent(query)}`)
       const data = await res.json()
-      setMedicines(data)
+      if (!res.ok || !Array.isArray(data)) throw new Error('Medicine search failed. Try again.')
+      if (version === searchVersion.current) setMedicines(data)
     } catch (err) {
-      console.error(err)
+      if (version === searchVersion.current) setError(err instanceof Error ? err.message : 'Medicine search failed')
     } finally {
-      setLoading(false)
+      if (version === searchVersion.current) setLoading(false)
     }
   }, 300)
 
   const handleSearch = (value: string) => {
     setSearch(value)
-    fetchMedicines(value)
+    setError(null)
+    setMedicines([])
+    setLoading(Boolean(value.trim()))
+    fetchMedicines(value.trim(), ++searchVersion.current)
+  }
+
+  const handleCreate = async () => {
+    if (creating || !search.trim()) return
+    setCreating(true)
+    setError(null)
+    try {
+      const medicine = await createCustomMedicine({ name: search, strength, form })
+      setSelectedMed(medicine)
+      setOpen(false)
+      setStrength('')
+      setForm('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create medicine')
+    } finally {
+      setCreating(false)
+    }
   }
 
   // Inline form state
@@ -76,6 +103,8 @@ export default function MedicineAutocomplete() {
     // Reset form
     setSelectedMed(null)
     setSearch('')
+    searchVersion.current += 1
+    setMedicines([])
     setDosage('')
     setFrequency('BD')
     setDuration('5 Days')
@@ -108,7 +137,7 @@ export default function MedicineAutocomplete() {
               <CommandList>
                 {loading && <div className="p-4 text-sm text-gray-500 text-center">Searching...</div>}
                 {!loading && search && medicines.length === 0 && (
-                  <CommandEmpty>No medicines found.</CommandEmpty>
+                  <div className="p-3 text-sm text-gray-500">No medicines found.</div>
                 )}
                 {!loading && medicines.length > 0 && (
                   <CommandGroup>
@@ -120,7 +149,7 @@ export default function MedicineAutocomplete() {
                           setSelectedMed(med)
                           setOpen(false)
                         }}
-                        className="py-3 cursor-pointer"
+                        className="min-h-11 py-3 cursor-pointer"
                       >
                         <div className="flex flex-col">
                           <span className="font-medium">{med.name}</span>
@@ -134,6 +163,18 @@ export default function MedicineAutocomplete() {
                     ))}
                   </CommandGroup>
                 )}
+                {search.trim() && (
+                  <CommandGroup heading="Custom medicine">
+                    <div className="grid grid-cols-2 gap-2 px-2 pb-2">
+                      <Input aria-label="Custom medicine strength (optional)" placeholder="Strength (optional)" value={strength} onChange={(e) => setStrength(e.target.value)} maxLength={80} className="h-11" />
+                      <Input aria-label="Custom medicine form (optional)" placeholder="Form (optional)" value={form} onChange={(e) => setForm(e.target.value)} maxLength={80} className="h-11" />
+                    </div>
+                    <CommandItem value="create-custom-medicine" onSelect={handleCreate} disabled={creating} className="min-h-11 py-3 cursor-pointer">
+                      {creating ? 'Creating medicine...' : `Add '${search.trim()}' as custom medicine`}
+                    </CommandItem>
+                  </CommandGroup>
+                )}
+                {error && <p role="alert" className="p-3 text-sm text-red-600">{error}</p>}
               </CommandList>
             </Command>
           </PopoverContent>
