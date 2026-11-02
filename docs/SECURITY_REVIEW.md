@@ -16,7 +16,7 @@ Severity: Critical = potential bulk medical-data exposure/modification or server
 
 **Concrete fix:** since this app uses Prisma for all application data, enable RLS and explicitly deny direct API access to all six tables; revoke browser-role/PUBLIC privileges and add a restrictive deny policy so an existing permissive policy cannot reopen access. Protect Prisma migration metadata too. Retain server action ownership checks: the current administrative Prisma connection bypasses RLS. Disable the Data API in the dashboard if unused, or remove application tables from exposed schemas. Do not introduce broad `authenticated USING (true)` policies.
 
-**Status:** remediation pending. Production application and metadata checks pending working DB access.
+**Status:** fixed in tracked migration `202611030003_private_application_tables/migration.sql:1`; production application and metadata checks still pending working DB access. `node scripts/check-database-isolation.mjs` reproduces the original exposure and verifies SELECT/INSERT/UPDATE/DELETE/TRUNCATE denial on all seven tables, restrictive RLS despite a permissive policy/restored DML grants, and retained trusted-server access. This uses the already installed PGlite test engine and synthetic data.
 
 ### C2 — Critical: prescription PDFs are designed for public URLs
 
