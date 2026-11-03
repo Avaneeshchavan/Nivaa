@@ -1,0 +1,9 @@
+# Prescription printing
+
+Task 2.5 adds the doctor's clinic letterhead, approved uploaded logo, registration/address/phone, full unique Rx ID, saved date, private uploaded signature and A4/A5 selection. Choose paper size in the builder before Save & Print. History defaults to A5; append `?size=A4` to its authenticated PDF route for A4. Preview uses the same doctor/assets/size. Generated files are size-specific to avoid overwriting an A4 file with A5.
+
+Settings accepts a PNG/JPEG signature under 1 MB. The authenticated upload action checks file signatures and stores only in that doctor's Auth UUID folder. Apply `202611030005_signature_storage` with the existing safe baseline/deploy procedure in DB_NOTES.md before using uploads. It creates a private signatures bucket on Supabase, restricts owner access and prevents browser users making it public. Plain Postgres skips Storage setup. No hosted settings/data were changed here. Existing logos are loaded only from the configured Supabase origin and the doctor's own folder; arbitrary remote profile URLs are never fetched by the PDF renderer.
+
+Devanagari/Marathi text uses bundled Noto Sans Devanagari with Helvetica Latin fallback; no network font fetch occurs when printing. Font source: https://github.com/notofonts/noto-fonts/tree/main/hinted/ttf/NotoSansDevanagari; SIL OFL license is in public/fonts/OFL.txt. The bundled data URI in lib/pdf-font.json contains that static Regular font. Verify spelling, complex names and clinical text on the clinic printer before use.
+
+Local checks rendered synthetic English/Marathi documents in A4 and A5 and visually checked the A5 layout. Live Storage upload/download and physical printer checks need the configured hosted project. TypeScript, production build and the PDF authorization regression passed.

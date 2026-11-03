@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRxBuilderStore } from '@/stores/rxBuilderStore'
 import { createPrescription } from '@/actions/prescriptions.actions'
-import { DiseaseTemplate, Patient } from '@/lib/generated/prisma/client'
+import { DiseaseTemplate, Patient, Doctor } from '@/lib/generated/prisma/client'
 import DiseaseTemplateSelector from './DiseaseTemplateSelector'
 import MedicineAutocomplete from './MedicineAutocomplete'
 import RxPreview from './RxPreview'
@@ -20,13 +20,15 @@ import { Printer, Save } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface RxBuilderProps {
+  doctor: Doctor
+  assets: { logoUrl?: string; signatureUrl?: string }
   duplicate?: DuplicateRxDraft | null
   initialPatientId?: string
   patients: Patient[]
   templates: DiseaseTemplate[]
 }
 
-export default function RxBuilder({ initialPatientId, patients, templates, duplicate }: RxBuilderProps) {
+export default function RxBuilder({ initialPatientId, patients, templates, duplicate, doctor, assets }: RxBuilderProps) {
   const router = useRouter()
   const { 
     visit, setVisit,
@@ -36,6 +38,7 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
     reset 
   } = useRxBuilderStore()
 
+  const [paperSize, setPaperSize] = useState<'A4' | 'A5'>('A5')
   const [saving, setSaving] = useState(false)
   const [visitError, setVisitError] = useState('')
   const selectedPatient = patients.find(p => p.id === patientId)
@@ -80,7 +83,7 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
       })
       
       if (print) {
-        window.open(`/api/prescriptions/${rx.id}/pdf`, '_blank')
+        window.open(`/api/prescriptions/${rx.id}/pdf?size=${paperSize}`, '_blank')
       }
       
       router.push(`/patients/${patientId}`)
@@ -118,6 +121,9 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
           </div>
         )}
 
+        <label className="block text-sm font-medium">Paper size
+          <select className="block min-h-11 border rounded px-3 bg-white" value={paperSize} onChange={e => setPaperSize(e.target.value === 'A4' ? 'A4' : 'A5')}><option>A5</option><option>A4</option></select>
+        </label>
         <VisitFields value={visit} onChange={value => { setVisit(value); setVisitError('') }} />
         {visitError && <p role="alert" className="text-red-600">{visitError}</p>}
         {/* Diagnosis & Templates */}
@@ -215,7 +221,7 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
 
       {/* RIGHT PANEL: Live Preview */}
       <div className="hidden md:block">
-        <RxPreview patient={selectedPatient} />
+        <RxPreview patient={selectedPatient} doctor={doctor} assets={assets} paperSize={paperSize} />
       </div>
 
     </div>

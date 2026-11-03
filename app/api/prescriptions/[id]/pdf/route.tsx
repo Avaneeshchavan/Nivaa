@@ -1,3 +1,4 @@
+import { getPdfAssets } from '@/lib/pdf-assets'
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentDoctor } from '@/actions/auth.actions'
@@ -32,6 +33,8 @@ export async function GET(
       return NextResponse.json({ error: 'Not found or unauthorized' }, { status: 404, headers: privateHeaders })
     }
 
+    const assets = await getPdfAssets(doctor)
+    const paperSize = new URL(request.url).searchParams.get('size') === 'A4' ? 'A4' : 'A5'
     // Render PDF to stream
     const pdfStream = await renderToStream(
       <RxPDFDocument
@@ -39,7 +42,9 @@ export async function GET(
         patient={prescription.patient}
         prescription={prescription}
         visit={prescription.visit}
-        clinicName="Nivaa Clinic" // Can be fetched from doctor profile later
+        clinicName={doctor.clinicName || 'Clinic'}
+        {...assets}
+        paperSize={paperSize}
       />
     )
 
@@ -53,7 +58,7 @@ export async function GET(
     // Upload to Supabase Storage
     const supabase = await createClient()
     // Storage policies match the verified Auth UUID, not the internal Doctor CUID.
-    const filePath = `${doctor.supabaseId}/${prescription.id}.pdf`
+    const filePath = `${doctor.supabaseId}/${prescription.id}-${paperSize}.pdf`
 
     const { error: uploadError } = await supabase.storage
       .from('prescriptions')

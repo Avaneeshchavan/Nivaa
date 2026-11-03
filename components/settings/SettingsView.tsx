@@ -1,5 +1,6 @@
 'use client'
 
+import { uploadSignature } from '@/actions/signature.actions'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -349,6 +350,16 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
                 </label>
               </div>
 
+              <label className="block text-sm font-medium mt-4">Signature (PNG/JPEG, under 1 MB)
+                <input type="file" accept="image/png,image/jpeg" className="block min-h-11 mt-2 max-w-full" onChange={async e => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  const data = new FormData(); data.set('signature', file)
+                  try { await uploadSignature(data); setProfileMessage({ type: 'success', text: 'Private signature saved.' }); router.refresh() }
+                  catch (error) { setProfileMessage({ type: 'error', text: error instanceof Error ? error.message : 'Upload failed' }) }
+                  e.target.value = ''
+                }} />
+              </label>
               {logoUploading && <p className="text-sm text-gray-500 animate-pulse">Uploading branding...</p>}
               {!logoUploading && !logoUrl && <p className="text-sm text-gray-400">No logo uploaded yet.</p>}
               {!logoUploading && logoUrl && <p className="text-sm text-green-600">Logo active</p>}

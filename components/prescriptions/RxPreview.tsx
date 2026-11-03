@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog'
 import RxPDFDocument from './RxPDFDocument'
 import { visitFormSchema } from '@/lib/validations/visit.schema'
-import type { Patient } from '@/lib/generated/prisma/client'
+import type { Patient, Doctor } from '@/lib/generated/prisma/client'
 
 // Dynamically import PDFViewerWrapper to avoid SSR issues
 const PDFViewer = dynamic(
@@ -17,7 +17,7 @@ const PDFViewer = dynamic(
   { ssr: false, loading: () => <div className="animate-pulse bg-gray-100 w-full h-full min-h-[500px] flex items-center justify-center text-gray-400">Loading PDF Preview...</div> }
 )
 
-export default function RxPreview({ patient }: { patient?: Patient }) {
+export default function RxPreview({ patient, doctor, assets, paperSize }: { patient?: Patient; doctor: Doctor; assets: { logoUrl?: string; signatureUrl?: string }; paperSize: 'A4' | 'A5' }) {
   const [mounted, setMounted] = useState(false)
   const { diagnosis, medicines, notes, visit } = useRxBuilderStore()
 
@@ -26,7 +26,7 @@ export default function RxPreview({ patient }: { patient?: Patient }) {
   }, [])
 
   // Mock objects for live preview
-  const mockDoctor = { name: 'Doctor', email: 'doctor@nivaaclinic.com' }
+
   const previewPatient = patient || { name: 'Select a patient', dob: null, phone: null, gender: null, allergies: null }
   const measurements = visitFormSchema.safeParse(visit)
   const previewPrescription = {
@@ -44,11 +44,13 @@ export default function RxPreview({ patient }: { patient?: Patient }) {
   const PDFComponent = (
     <PDFViewer className="w-full h-full min-h-[600px] border-0 rounded-lg">
       <RxPDFDocument 
-        doctor={mockDoctor}
+        doctor={doctor}
         patient={previewPatient}
         visit={measurements.success ? measurements.data : undefined}
         prescription={previewPrescription}
-        clinicName="Nivaa Clinic"
+        clinicName={doctor.clinicName || 'Clinic'}
+        {...assets}
+        paperSize={paperSize}
       />
     </PDFViewer>
   )

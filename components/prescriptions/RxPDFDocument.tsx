@@ -1,7 +1,10 @@
 /* eslint-disable jsx-a11y/alt-text */
-import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer'
 import { formatVisitMeasurements, type VisitMeasurements } from '@/lib/validations/visit.schema'
 import { Doctor, Patient, Prescription } from '@/lib/generated/prisma/client'
+
+import fontSource from '@/lib/pdf-font.json'
+Font.register({ family: 'Nivaa', src: fontSource })
 
 // Define medicine shape stored in Prescription.medicines JSON
 interface RxMedicine {
@@ -16,7 +19,7 @@ interface RxMedicine {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: 30, fontFamily: 'Helvetica', fontSize: 10, color: '#333' },
+  page: { padding: 30, paddingBottom: 110, fontFamily: ['Helvetica', 'Nivaa'], fontSize: 10, color: '#333' },
   watermark: {
     position: 'absolute',
     top: '30%',
@@ -41,10 +44,10 @@ const styles = StyleSheet.create({
   diagnosisText: { marginBottom: 15, lineHeight: 1.5 },
   table: { width: 'auto', borderStyle: 'solid', borderWidth: 1, borderColor: '#e5e5e5', borderRightWidth: 0, borderBottomWidth: 0, marginBottom: 20 },
   tableRow: { margin: 'auto', flexDirection: 'row' },
-  tableColHeader: { width: '12.5%', borderStyle: 'solid', borderWidth: 1, borderColor: '#e5e5e5', borderLeftWidth: 0, borderTopWidth: 0, backgroundColor: '#1a4f8a', color: '#fff' },
-  tableColHeaderWide: { width: '25%', borderStyle: 'solid', borderWidth: 1, borderColor: '#e5e5e5', borderLeftWidth: 0, borderTopWidth: 0, backgroundColor: '#1a4f8a', color: '#fff' },
-  tableCol: { width: '12.5%', borderStyle: 'solid', borderWidth: 1, borderColor: '#e5e5e5', borderLeftWidth: 0, borderTopWidth: 0 },
-  tableColWide: { width: '25%', borderStyle: 'solid', borderWidth: 1, borderColor: '#e5e5e5', borderLeftWidth: 0, borderTopWidth: 0 },
+  tableColHeader: { width: '13.33%', borderStyle: 'solid', borderWidth: 1, borderColor: '#e5e5e5', borderLeftWidth: 0, borderTopWidth: 0, backgroundColor: '#1a4f8a', color: '#fff' },
+  tableColHeaderWide: { width: '20%', borderStyle: 'solid', borderWidth: 1, borderColor: '#e5e5e5', borderLeftWidth: 0, borderTopWidth: 0, backgroundColor: '#1a4f8a', color: '#fff' },
+  tableCol: { width: '13.33%', borderStyle: 'solid', borderWidth: 1, borderColor: '#e5e5e5', borderLeftWidth: 0, borderTopWidth: 0 },
+  tableColWide: { width: '20%', borderStyle: 'solid', borderWidth: 1, borderColor: '#e5e5e5', borderLeftWidth: 0, borderTopWidth: 0 },
   tableCellHeader: { margin: 5, fontSize: 9, fontWeight: 'bold' },
   tableCell: { margin: 5, fontSize: 9 },
   rowBg: { backgroundColor: '#f9f9f9' },
@@ -57,14 +60,16 @@ const styles = StyleSheet.create({
 
 interface RxPDFProps {
   visit?: VisitMeasurements | null
-  doctor: Pick<Doctor, 'name' | 'email'>
+  doctor: Pick<Doctor, 'name' | 'email'> & Partial<Pick<Doctor, 'license' | 'address' | 'phone'>>
   patient: Pick<Patient, 'name' | 'dob' | 'gender' | 'phone' | 'allergies'>
   prescription: Pick<Prescription, 'id' | 'createdAt' | 'diagnosis' | 'notes'> & { medicines: unknown }
   clinicName?: string
+  signatureUrl?: string
+  paperSize?: 'A4' | 'A5'
   logoUrl?: string
 }
 
-export default function RxPDFDocument({ doctor, patient, prescription, clinicName = 'Clinic Name', logoUrl, visit }: RxPDFProps) {
+export default function RxPDFDocument({ doctor, patient, prescription, clinicName = 'Clinic Name', logoUrl, signatureUrl, paperSize = 'A5', visit }: RxPDFProps) {
   const meds: RxMedicine[] = typeof prescription.medicines === 'string'
     ? JSON.parse(prescription.medicines as string)
     : (prescription.medicines as RxMedicine[] || [])
@@ -81,7 +86,7 @@ export default function RxPDFDocument({ doctor, patient, prescription, clinicNam
   }
   return (
     <Document>
-      <Page size="A5" style={styles.page}>
+      <Page size={paperSize} style={styles.page}>
         <Text style={styles.watermark}>{clinicName}</Text>
         {/* Header */}
         <View style={styles.header}>
@@ -90,8 +95,12 @@ export default function RxPDFDocument({ doctor, patient, prescription, clinicNam
             <Text style={styles.clinicName}>{clinicName}</Text>
             <Text style={styles.doctorName}>Dr. {doctor.name}</Text>
             <Text style={styles.doctorDetails}>{doctor.email}</Text>
+            {doctor.license && <Text style={styles.doctorDetails}>Reg: {doctor.license}</Text>}
+            {doctor.address && <Text style={styles.doctorDetails}>{doctor.address}</Text>}
+            {doctor.phone && <Text style={styles.doctorDetails}>{doctor.phone}</Text>}
           </View>
           <View style={styles.headerRight}>
+            <Text style={styles.doctorDetails}>Rx: {prescription.id}</Text>
             <Text style={styles.doctorDetails}>Date: {dateText}</Text>
             <Text style={styles.doctorDetails}>Time: {timeText}</Text>
           </View>
@@ -130,7 +139,7 @@ export default function RxPDFDocument({ doctor, patient, prescription, clinicNam
                 <View style={styles.tableColHeaderWide}><Text style={styles.tableCellHeader}>Instr.</Text></View>
               </View>
               {meds.map((med, i) => (
-                <View key={med.id} style={i % 2 === 1 ? [styles.tableRow, styles.rowBg] : styles.tableRow}>
+                <View key={med.id} wrap={false} style={i % 2 === 1 ? [styles.tableRow, styles.rowBg] : styles.tableRow}>
                   <View style={styles.tableCol}><Text style={styles.tableCell}>{i + 1}</Text></View>
                   <View style={styles.tableColWide}><Text style={styles.tableCell}>{med.name}{med.generic ? ` (${med.generic})` : ''}</Text></View>
                   <View style={styles.tableCol}><Text style={styles.tableCell}>{med.dosage}</Text></View>
@@ -150,12 +159,13 @@ export default function RxPDFDocument({ doctor, patient, prescription, clinicNam
           </View>
         )}
         {/* Footer */}
-        <View style={styles.footer}>
+        <View style={styles.footer} fixed>
           <View>
             <Text style={styles.footerText}>Digitally generated prescription</Text>
             <Text style={styles.footerText}>Date: {dateText}</Text>
           </View>
           <View style={styles.signatureBox}>
+            {signatureUrl && <Image src={signatureUrl} style={{ width: 100, height: 35, objectFit: 'contain' }} />}
             <View style={styles.signatureLine} />
             <Text style={{ fontSize: 9, fontWeight: 'bold' }}>Dr. {doctor.name}</Text>
             <Text style={styles.footerText}>Signature</Text>

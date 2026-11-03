@@ -1,3 +1,4 @@
+import { getPdfAssets } from '@/lib/pdf-assets'
 import RxBuilder from '@/components/prescriptions/RxBuilder'
 import HeaderSetter from '@/components/dashboard/HeaderSetter'
 import prisma from '@/lib/prisma'
@@ -15,6 +16,7 @@ export default async function NewPrescriptionPage({
   const doctor = await getCurrentDoctor()
   if (!doctor) redirect('/login')
 
+  const assets = await getPdfAssets(doctor)
   const { patientId, duplicateId } = await searchParams
   const duplicate = duplicateId ? await getPrescriptionForDuplicate(duplicateId) : null
   if (duplicateId && !duplicate) notFound()
@@ -42,6 +44,8 @@ export default async function NewPrescriptionPage({
       <div className="h-full">
         <RxBuilder
           key={duplicateId || patientId || 'new'}
+          doctor={doctor}
+          assets={assets}
           duplicate={duplicate}
           initialPatientId={initialPatientId} 
           patients={patients} 

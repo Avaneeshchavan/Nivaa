@@ -16,6 +16,7 @@ const mocks = {
   'next/server': { NextResponse },
   '@/actions/auth.actions': { getCurrentDoctor: async () => currentDoctor },
   '@/lib/prisma': { default: { prescription: { findFirst: async args => { query = args; return row } } } },
+  '@/lib/pdf-assets': { getPdfAssets: async () => ({}) },
   '@/lib/supabase/server': { createClient: async () => ({ storage: { from: bucket => {
     assert.equal(bucket, 'prescriptions')
     return { upload: async (...args) => { uploaded = args; return { error: uploadError } } }
@@ -27,7 +28,7 @@ const source = fs.readFileSync('app/api/prescriptions/[id]/pdf/route.tsx', 'utf8
 const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2020 } }).outputText
 const exported = {}
 const logs = []
-vm.runInNewContext(code, { exports: exported, require: name => mocks[name] || require(name), Buffer, console: { error: (...args) => logs.push(args) } })
+vm.runInNewContext(code, { URL, exports: exported, require: name => mocks[name] || require(name), Buffer, console: { error: (...args) => logs.push(args) } })
 async function run(user, prescription, status) {
   currentDoctor = user; row = prescription; query = undefined; rendered = false; uploaded = undefined
   const response = await exported.GET(new Request('http://localhost/api/prescriptions/rx-a/pdf'), { params: Promise.resolve({ id: 'rx-a' }) })
@@ -46,7 +47,7 @@ async function run(user, prescription, status) {
   const response = await run(doctor, fixture, 200)
   assert.equal(query.where.doctorId, doctor.id)
   assert.equal(query.where.patient.doctorId, doctor.id)
-  assert.equal(uploaded[0], `${doctor.supabaseId}/rx-a.pdf`)
+  assert.equal(uploaded[0], `${doctor.supabaseId}/rx-a-A5.pdf`)
   assert.equal(uploaded[2].cacheControl, '0')
   assert.equal(await response.text(), '%PDF-fixture')
   uploadError = { message: 'sensitive fixture detail' }
