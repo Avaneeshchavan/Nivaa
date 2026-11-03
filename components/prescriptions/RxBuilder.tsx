@@ -1,5 +1,7 @@
 'use client'
 
+import { useRxAutosave } from './useRxAutosave'
+import type { RxDraft } from '@/lib/validations/draft.schema'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRxBuilderStore } from '@/stores/rxBuilderStore'
@@ -20,6 +22,8 @@ import { Printer, Save } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface RxBuilderProps {
+  draftKey: string
+  savedDraft: RxDraft | null
   doctor: Doctor
   assets: { logoUrl?: string; signatureUrl?: string }
   duplicate?: DuplicateRxDraft | null
@@ -28,7 +32,7 @@ interface RxBuilderProps {
   templates: DiseaseTemplate[]
 }
 
-export default function RxBuilder({ initialPatientId, patients, templates, duplicate, doctor, assets }: RxBuilderProps) {
+export default function RxBuilder({ initialPatientId, patients, templates, duplicate, doctor, assets, draftKey, savedDraft }: RxBuilderProps) {
   const router = useRouter()
   const { 
     visit, setVisit,
@@ -55,10 +59,14 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
       medicines: duplicate?.medicines.map(m => ({ ...m, id: crypto.randomUUID() })) || [],
       templateId: null,
       visit: { ...emptyVisitForm },
+      ...(savedDraft || {}),
     })
-    if (duplicate) setToast('Prescription copied for today. Review and save as a new Rx.')
-    return () => reset()
-  }, [initialPatientId, duplicate, reset])
+    if (savedDraft) setToast('Draft restored. Review before saving.')
+    else if (duplicate) setToast('Prescription copied for today. Review and save as a new Rx.')
+
+  }, [initialPatientId, duplicate, reset, savedDraft])
+
+  const autosave = useRxAutosave(draftKey)
 
   const handleSave = async (print: boolean) => {
     if (!patientId) {
@@ -82,6 +90,7 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
         notes
       })
       
+      try { await autosave.complete() } catch { setToast('Prescription saved; old draft could not be cleared.') }
       if (print) {
         window.open(`/api/prescriptions/${rx.id}/pdf?size=${paperSize}`, '_blank')
       }
@@ -96,6 +105,7 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full pb-20 md:pb-0">
       
+      <p role="status" className="col-span-full text-sm text-gray-500">{autosave.status}</p>
       {toast && <Toast message={toast} onDismiss={dismissToast} />}
       {/* LEFT PANEL: Form */}
       <div className="space-y-6 animate-in fade-in duration-300">

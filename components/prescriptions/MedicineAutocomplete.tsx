@@ -87,7 +87,7 @@ export default function MedicineAutocomplete() {
   const [instructions, setInstructions] = useState('')
 
   const handleAdd = () => {
-    if (!selectedMed) return
+    if (!selectedMed || !dosage.trim()) return
     
     addMedicine({
       id: crypto.randomUUID(), // Temp ID for builder
@@ -180,7 +180,9 @@ export default function MedicineAutocomplete() {
           </PopoverContent>
         </Popover>
       ) : (
-        <div className="space-y-4 animate-in fade-in zoom-in duration-200">
+        <div className="space-y-4 animate-in fade-in zoom-in duration-200" onKeyDown={event => {
+          if (event.key === 'Enter' && !event.nativeEvent.isComposing && event.target instanceof HTMLInputElement) { event.preventDefault(); handleAdd() }
+        }}>
           <div className="flex justify-between items-start bg-primary/5 p-3 rounded-md border border-primary/20">
             <div>
               <p className="font-semibold text-primary">{selectedMed.name}</p>
@@ -195,6 +197,7 @@ export default function MedicineAutocomplete() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Dosage</label>
               <Input 
+                autoFocus
                 placeholder="e.g. 500mg, 1 tablet" 
                 value={dosage} 
                 onChange={(e) => setDosage(e.target.value)}

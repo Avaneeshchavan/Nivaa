@@ -1,3 +1,4 @@
+import { getRxDraft } from '@/actions/drafts.actions'
 import { getPdfAssets } from '@/lib/pdf-assets'
 import RxBuilder from '@/components/prescriptions/RxBuilder'
 import HeaderSetter from '@/components/dashboard/HeaderSetter'
@@ -18,6 +19,8 @@ export default async function NewPrescriptionPage({
 
   const assets = await getPdfAssets(doctor)
   const { patientId, duplicateId } = await searchParams
+  const draftKey = duplicateId ? `duplicate_${duplicateId}` : patientId ? `patient_${patientId}` : 'new'
+  const savedDraft = await getRxDraft(draftKey)
   const duplicate = duplicateId ? await getPrescriptionForDuplicate(duplicateId) : null
   if (duplicateId && !duplicate) notFound()
 
@@ -44,6 +47,8 @@ export default async function NewPrescriptionPage({
       <div className="h-full">
         <RxBuilder
           key={duplicateId || patientId || 'new'}
+          draftKey={draftKey}
+          savedDraft={savedDraft}
           doctor={doctor}
           assets={assets}
           duplicate={duplicate}

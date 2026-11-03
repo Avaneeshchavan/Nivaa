@@ -26,6 +26,7 @@ model Doctor {
   phone      String?
   logoUrl    String?
 
+  drafts        RxDraft[]
   patients      Patient[]
   visits        Visit[]
   prescriptions Prescription[]
@@ -113,4 +114,14 @@ model DiseaseTemplate {
   updatedAt DateTime @updatedAt
 
   doctor Doctor @relation(fields: [doctorId], references: [id])
+}
+
+model RxDraft {
+  id        String   @id @default(cuid())
+  doctorId  String
+  key       String
+  payload   Json
+  updatedAt DateTime @updatedAt
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+  @@unique([doctorId, key])
 }

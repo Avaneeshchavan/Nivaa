@@ -17,7 +17,7 @@
 - [x] 2.3 Visit fields: weight, vitals (BP, temp, SpO2), allergies banner on patient header + Rx builder. (Migration verified locally; hosted DB deployment pending; see docs/DB_NOTES.md.)
 - [x] 2.4 Template quick-bar in Rx builder: one-tap templates, editable after fill.
 - [x] 2.5 PDF: letterhead/logo, Rx number, date, signature image upload, A4 and A5; Devanagari/Marathi text if used.
-- [ ] 2.6 Speed: Cmd/Ctrl+K patient search, Enter to add medicine, autosave drafts.
+- [x] 2.6 Speed: Cmd/Ctrl+K patient search, Enter to add medicine, autosave drafts.
 ## Phase 3 - Security & ops (Sol medium; Astra high ONCE for review)
 - [ ] 3.1 Supabase RLS on all tables + storage; `prescriptions` bucket PRIVATE with signed URLs.
 - [ ] 3.2 Only the 2 allowlisted doctor emails can sign in; disable public signups (dashboard steps in docs/DEPLOY.md for the human).
