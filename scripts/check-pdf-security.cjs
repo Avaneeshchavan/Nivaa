@@ -8,8 +8,9 @@ const ts = require('typescript')
 // Hosted JWT, Storage/CDN and real rendering still need deployment smoke tests.
 const doctor = { id: 'doctor-a', supabaseId: '11111111-1111-4111-8111-111111111111' }
 const fixture = { id: 'rx-a', doctorId: doctor.id, patientId: 'patient-a', patient: { doctorId: doctor.id }, visit: { doctorId: doctor.id, patientId: 'patient-a' } }
-let currentDoctor, row, query, rendered, uploaded, uploadError, renderError
+let currentDoctor, row, query, rendered, uploaded, uploadError, renderError, signed
 class NextResponse extends Response {
+  static redirect(url, status = 307) { return new NextResponse(null, { status, headers: { Location: url } }) }
   static json(body, options) { return Response.json(body, options) }
 }
 const mocks = {
@@ -19,7 +20,7 @@ const mocks = {
   '@/lib/pdf-assets': { getPdfAssets: async () => ({}) },
   '@/lib/supabase/server': { createClient: async () => ({ storage: { from: bucket => {
     assert.equal(bucket, 'prescriptions')
-    return { upload: async (...args) => { uploaded = args; return { error: uploadError } } }
+    return { upload: async (...args) => { uploaded = args; return { error: uploadError } }, createSignedUrl: async (path, expiry) => { assert.equal(path, `${doctor.supabaseId}/rx-a-A5.pdf`); assert.equal(expiry, 60); return signed ? { data: { signedUrl: 'https://fixture.invalid/private?token=short-lived' }, error: null } : { data: null, error: {} } } }
   } } }) },
   '@react-pdf/renderer': { renderToStream: async () => { rendered = true; if (renderError) throw new Error('sensitive fixture detail'); return Readable.from([Buffer.from('%PDF-fixture')]) } },
   '@/components/prescriptions/RxPDFDocument': { default: () => null },
@@ -34,7 +35,7 @@ async function run(user, prescription, status) {
   const response = await exported.GET(new Request('http://localhost/api/prescriptions/rx-a/pdf'), { params: Promise.resolve({ id: 'rx-a' }) })
   assert.equal(response.status, status)
   assert.equal(response.headers.get('cache-control'), 'private, no-store')
-  if (status !== 200) { assert.equal(uploaded, undefined); assert.equal(rendered, status === 500) }
+  if (status >= 400) { assert.equal(uploaded, undefined); assert.equal(rendered, status === 500) }
   return response
 }
 ;(async () => {
@@ -50,6 +51,10 @@ async function run(user, prescription, status) {
   assert.equal(uploaded[0], `${doctor.supabaseId}/rx-a-A5.pdf`)
   assert.equal(uploaded[2].cacheControl, '0')
   assert.equal(await response.text(), '%PDF-fixture')
+  signed = true
+  const redirect = await run(doctor, fixture, 307)
+  assert.equal(redirect.headers.get('location'), 'https://fixture.invalid/private?token=short-lived')
+  signed = false
   uploadError = { message: 'sensitive fixture detail' }
   await run(doctor, { ...fixture, visit: null }, 200)
   uploadError = null; renderError = true

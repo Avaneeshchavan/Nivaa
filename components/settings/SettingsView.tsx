@@ -111,8 +111,9 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
     setProfileMessage(null)
 
     try {
-      const fileExt = file.name.split('.').pop()
-      const filePath = `${doctor.id}/logo.${fileExt}`
+      if (!['image/png', 'image/jpeg'].includes(file.type) || file.size > 1024 * 1024) throw new Error('Choose a PNG/JPEG logo under 1 MB')
+      const fileExt = file.type === 'image/png' ? 'png' : 'jpg'
+      const filePath = `${doctor.supabaseId}/logo.${fileExt}`
 
       // Upload to Supabase Storage bucket 'logos'
       const { error: uploadError } = await supabase.storage
@@ -342,7 +343,7 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
                   <span className="text-xs">Upload Logo</span>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg"
                     onChange={handleLogoUpload}
                     disabled={logoUploading}
                     className="hidden"

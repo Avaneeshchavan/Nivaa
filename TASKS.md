@@ -19,7 +19,7 @@
 - [x] 2.5 PDF: letterhead/logo, Rx number, date, signature image upload, A4 and A5; Devanagari/Marathi text if used.
 - [x] 2.6 Speed: Cmd/Ctrl+K patient search, Enter to add medicine, autosave drafts.
 ## Phase 3 - Security & ops (Sol medium; Astra high ONCE for review)
-- [ ] 3.1 Supabase RLS on all tables + storage; `prescriptions` bucket PRIVATE with signed URLs.
+- [x] 3.1 Supabase RLS on all tables + storage; `prescriptions` bucket PRIVATE with signed URLs. (Local implementation/tests pass; HUMAN hosted migration and verification pending docs/STORAGE_SECURITY.md.)
 - [ ] 3.2 Only the 2 allowlisted doctor emails can sign in; disable public signups (dashboard steps in docs/DEPLOY.md for the human).
 - [ ] 3.3 Rate-limit login; security headers; audit log table (who viewed/edited what).
 - [ ] 3.4 Backups: scripts/backup.sh (pg_dump) + weekly export docs. Supabase free tier pauses on inactivity -> document keep-alive.

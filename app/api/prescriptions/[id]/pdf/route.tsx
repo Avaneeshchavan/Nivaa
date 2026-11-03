@@ -73,7 +73,17 @@ export async function GET(
       // Continue anyway, we can still serve the PDF to the doctor
     }
 
-    // Return the PDF directly
+    if (!uploadError) {
+      // Authorize and render first; never persist bearer URLs in the database.
+      const { data, error } = await supabase.storage.from('prescriptions').createSignedUrl(filePath, 60)
+      if (!error && data?.signedUrl) {
+        const response = NextResponse.redirect(data.signedUrl, 307)
+        Object.entries(privateHeaders).forEach(([name, value]) => response.headers.set(name, value))
+        return response
+      }
+    }
+
+    // Storage unavailable: preserve the authenticated direct-print fallback.
     return new NextResponse(pdfBuffer, {
       headers: {
         ...privateHeaders,
