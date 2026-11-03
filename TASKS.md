@@ -15,7 +15,7 @@
 - [x] 2.1 Rx history: re-open a past Rx, "Duplicate as new Rx" (big time saver for repeat patients).
 - [x] 2.2 Patient search: add phone, diagnosis, medicine search; pg_trgm; duplicate-patient warning (similar name + same phone). (Local SQL verified; authenticated HTTP timing pending; see docs/SEARCH_NOTES.md.)
 - [x] 2.3 Visit fields: weight, vitals (BP, temp, SpO2), allergies banner on patient header + Rx builder. (Migration verified locally; hosted DB deployment pending; see docs/DB_NOTES.md.)
-- [ ] 2.4 Template quick-bar in Rx builder: one-tap templates, editable after fill.
+- [x] 2.4 Template quick-bar in Rx builder: one-tap templates, editable after fill.
 - [ ] 2.5 PDF: letterhead/logo, Rx number, date, signature image upload, A4 and A5; Devanagari/Marathi text if used.
 - [ ] 2.6 Speed: Cmd/Ctrl+K patient search, Enter to add medicine, autosave drafts.
 ## Phase 3 - Security & ops (Sol medium; Astra high ONCE for review)

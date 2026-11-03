@@ -20,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import { BookTemplate } from 'lucide-react'
 
 interface DiseaseTemplateSelectorProps {
@@ -58,7 +59,10 @@ export default function DiseaseTemplateSelector({ templates }: DiseaseTemplateSe
 
   return (
     <>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3" aria-label="Prescription templates">
+        {templates.slice(0, 5).map(template => (
+          <Button key={template.id} variant="outline" className="min-h-11" onClick={() => handleSelect(template.id)}>{template.name}</Button>
+        ))}
         <Select onValueChange={handleSelect}>
           <SelectTrigger className="w-[280px] h-12 bg-white text-base">
             <div className="flex items-center gap-2 text-primary">

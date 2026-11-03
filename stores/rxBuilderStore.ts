@@ -1,3 +1,5 @@
+import { parseRxMedicines } from '@/lib/validations/prescription.schema'
+import type { DiseaseTemplate } from '@/lib/generated/prisma/client'
 import { create } from 'zustand'
 import { emptyVisitForm, type VisitFormValues } from '@/lib/validations/visit.schema'
 
@@ -28,7 +30,7 @@ interface RxBuilderState {
   updateMedicine: (id: string, medicine: Partial<RxMedicine>) => void
   removeMedicine: (id: string) => void
   setNotes: (notes: string) => void
-  applyTemplate: (template: any) => void
+  applyTemplate: (template: Pick<DiseaseTemplate, 'id' | 'diagnosis' | 'medicines'>) => void
   reset: () => void
 }
 
@@ -66,11 +68,8 @@ export const useRxBuilderStore = create<RxBuilderState>((set) => ({
   setNotes: (notes) => set({ notes }),
   
   applyTemplate: (template) => {
-    // Expected template to have diagnosis and medicines (parsed JSON)
-    const parsedMedicines = typeof template.medicines === 'string' 
-      ? JSON.parse(template.medicines) 
-      : (template.medicines || [])
-      
+    const parsedMedicines = parseRxMedicines(template.medicines).map(m => ({ ...m, id: crypto.randomUUID() }))
+
     set({
       diagnosis: template.diagnosis || '',
       medicines: parsedMedicines,
