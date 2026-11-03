@@ -20,7 +20,7 @@
 - [x] 2.6 Speed: Cmd/Ctrl+K patient search, Enter to add medicine, autosave drafts.
 ## Phase 3 - Security & ops (Sol medium; Astra high ONCE for review)
 - [x] 3.1 Supabase RLS on all tables + storage; `prescriptions` bucket PRIVATE with signed URLs. (Local implementation/tests pass; HUMAN hosted migration and verification pending docs/STORAGE_SECURITY.md.)
-- [ ] 3.2 Only the 2 allowlisted doctor emails can sign in; disable public signups (dashboard steps in docs/DEPLOY.md for the human).
+- [ ] 3.2 Only the 2 allowlisted doctor emails can sign in; disable public signups (dashboard steps in docs/DEPLOY.md for the human). (App-side allowlist verified; HUMAN configuration/signup disablement and hosted verification pending docs/DEPLOY.md.)
 - [ ] 3.3 Rate-limit login; security headers; audit log table (who viewed/edited what).
 - [ ] 3.4 Backups: scripts/backup.sh (pg_dump) + weekly export docs. Supabase free tier pauses on inactivity -> document keep-alive.
 - [ ] 3.5 ASTRA REVIEW (one thread): security + privacy review -> docs/SECURITY_REVIEW.md, fix criticals only.

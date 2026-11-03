@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { createClient } from '@/lib/supabase/client'
+import { signIn } from '@/actions/auth.actions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,7 +22,6 @@ export default function LoginPage() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const supabase = createClient()
 
   const {
     register,
@@ -40,19 +39,16 @@ export default function LoginPage() {
     setIsLoading(true)
     setError(null)
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    })
-
-    if (signInError) {
-      setError(signInError.message)
+    try {
+      const result = await signIn(data)
+      if (result.error) { setError(result.error); return }
+      router.push('/patients')
+      router.refresh()
+    } catch {
+      setError('Unable to sign in. Please try again.')
+    } finally {
       setIsLoading(false)
-      return
     }
-
-    router.push('/patients')
-    router.refresh()
   }
 
   return (

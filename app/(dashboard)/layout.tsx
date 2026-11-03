@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { ReactNode } from 'react'
 import { getCurrentDoctor } from '@/actions/auth.actions'
 import StoreInitializer from '@/components/StoreInitializer'
@@ -16,6 +17,7 @@ export default async function DashboardLayout({
   headerAction,
 }: DashboardLayoutProps) {
   const doctor = await getCurrentDoctor()
+  if (!doctor) redirect('/login')
 
   return (
     <HeaderProvider>

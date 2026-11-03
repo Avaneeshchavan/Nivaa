@@ -1,3 +1,4 @@
+import { isAllowedDoctorUser } from '@/lib/auth/doctor-access'
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
@@ -38,9 +39,10 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Every route requires a verified session unless explicitly public above.
-  if (!user) {
+  if (!isAllowedDoctorUser(user)) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    url.search = ''
     const response = NextResponse.redirect(url)
     supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
     return response
