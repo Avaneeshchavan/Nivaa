@@ -16,7 +16,7 @@ The completed branches form a linear stack from `main` (`061db5e`), so the merge
 8. `task/3.1` — includes `task/2.6`; adds private Storage policies and signed PDF delivery.
 9. `task/3.2` — includes `task/3.1`; adds the doctor allowlist.
 
-Every branch's `git merge-base main <branch>` was `061db5e`, and each later branch's log contained the preceding branch tip. `integration` was created at the complete `task/3.2` tip (`e94ee3c`); each requested branch was then checked in the order above and was already included. The history required only fast-forwards.
+Before integration, every branch's `git merge-base main <branch>` was the original `main` tip, `061db5e`, and each later branch's log contained the preceding branch tip. `integration` was created at the complete `task/3.2` tip (`e94ee3c`); each requested branch was then checked in the order above and was already included. The history required only fast-forwards.
 
 ## Conflicts and preservation
 
