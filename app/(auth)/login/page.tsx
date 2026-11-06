@@ -1,12 +1,13 @@
 'use client'
 
+import { Activity, LockKeyhole } from 'lucide-react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { signIn } from '@/actions/auth.actions'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -52,15 +53,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div className="min-h-dvh grid place-items-center bg-[radial-gradient(ellipse_at_top,#dceee5,transparent_65%)] bg-background p-4 sm:p-8">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-4 text-center">
-          <div className="mx-auto w-16 h-16 bg-primary rounded-full flex items-center justify-center text-primary-foreground">
-            {/* Clinic Logo Placeholder */}
-            <span className="text-2xl font-bold">+</span>
+          <div className="mx-auto size-14 bg-primary rounded-2xl flex items-center justify-center text-primary-foreground">
+            <Activity aria-hidden="true" className="size-8" />
           </div>
-          <CardTitle className="text-2xl font-semibold">Clinic Portal</CardTitle>
-          <CardDescription>Enter your credentials to access the system</CardDescription>
+          <h1 className="clinic-heading">Nivaa Clinic</h1>
+          <CardDescription>Sign in with your approved clinic account.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -69,6 +69,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
+                autoComplete="username"
                 placeholder="doctor@clinic.com"
                 className="h-12 text-base"
                 disabled={isLoading}
@@ -84,6 +85,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 placeholder="••••••••"
                 className="h-12 text-base"
                 disabled={isLoading}
@@ -94,12 +96,13 @@ export default function LoginPage() {
               )}
             </div>
 
-            {error && <p className="text-sm text-destructive text-center">{error}</p>}
+            {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-red-900">{error}</p>}
 
             <Button type="submit" className="w-full h-12 text-base font-medium" disabled={isLoading}>
               {isLoading ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
+          <p className="mt-5 flex items-center justify-center gap-2 text-sm text-muted-foreground"><LockKeyhole aria-hidden="true" className="size-4" />Private clinic workspace</p>
         </CardContent>
       </Card>
     </div>

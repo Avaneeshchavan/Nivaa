@@ -1,7 +1,7 @@
 'use client'
 
 import { uploadSignature } from '@/actions/signature.actions'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -51,6 +51,9 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
   const [phone, setPhone] = useState(doctor?.phone || '')
   const [logoUrl, setLogoUrl] = useState(doctor?.logoUrl || '')
   const [logoUploading, setLogoUploading] = useState(false)
+  const [signatureUploading, setSignatureUploading] = useState(false)
+  const logoInput = useRef<HTMLInputElement>(null)
+  const signatureInput = useRef<HTMLInputElement>(null)
 
   // Templates State
   const [templates, setTemplates] = useState<DiseaseTemplate[]>(initialTemplates)
@@ -59,7 +62,7 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
   // Template Form Sheet State
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<DiseaseTemplate | null>(null)
-  
+
   const [templateName, setTemplateName] = useState('')
   const [templateDiagnosis, setTemplateDiagnosis] = useState('')
   const [templateMedicines, setTemplateMedicines] = useState<RxMedicine[]>([])
@@ -182,11 +185,11 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
     setEditingTemplate(t)
     setTemplateName(t.name)
     setTemplateDiagnosis(t.diagnosis || '')
-    
+
     const parsedMeds = typeof t.medicines === 'string'
       ? JSON.parse(t.medicines)
       : (t.medicines || [])
-    
+
     setTemplateMedicines(parsedMeds)
     resetMedicineForm()
     setIsSheetOpen(true)
@@ -293,26 +296,38 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
 
   return (
     <div className="space-y-6">
-      
+
+      <div>
+        <p className="clinic-kicker mb-2">Clinic workspace</p>
+        <h1 className="clinic-heading">{activeTab === 'profile' ? 'Clinic settings' : 'Prescription templates'}</h1>
+        <p className="mt-2 text-muted-foreground">{activeTab === 'profile' ? 'Manage the clinic details and artwork used on your prescriptions.' : 'Set up reusable diagnoses and medicines for common visits.'}</p>
+      </div>
+      {profileMessage && (
+        <p role={profileMessage.type === 'error' ? 'alert' : 'status'} className={`flex items-center gap-2 rounded-xl border p-4 ${profileMessage.type === 'error' ? 'border-red-300 bg-red-50 text-red-900' : 'bg-secondary text-secondary-foreground'}`}>
+          <AlertCircle aria-hidden="true" className="size-5 shrink-0" />{profileMessage.text}
+        </p>
+      )}
       {/* Navigation Tabs */}
-      <div className="flex space-x-1 bg-white p-1 rounded-xl shadow-sm border border-gray-100 max-w-md">
+      <div className="flex gap-1 bg-secondary p-1 rounded-xl border max-w-md">
         <button
+          aria-pressed={activeTab === 'profile'}
           onClick={() => setActiveTab('profile')}
-          className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all duration-200 ${
+          className={`flex-1 min-h-12 py-2 px-2 sm:px-4 rounded-lg text-base font-semibold flex items-center justify-center gap-2 transition-all duration-200 ${
             activeTab === 'profile'
               ? 'bg-primary text-primary-foreground shadow'
-              : 'text-gray-600 hover:bg-gray-50'
+              : 'text-muted-foreground hover:bg-gray-50'
           }`}
         >
           <User className="w-4 h-4" />
           Doctor Profile
         </button>
         <button
+          aria-pressed={activeTab === 'templates'}
           onClick={() => setActiveTab('templates')}
-          className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all duration-200 ${
+          className={`flex-1 min-h-12 py-2 px-2 sm:px-4 rounded-lg text-base font-semibold flex items-center justify-center gap-2 transition-all duration-200 ${
             activeTab === 'templates'
               ? 'bg-primary text-primary-foreground shadow'
-              : 'text-gray-600 hover:bg-gray-50'
+              : 'text-muted-foreground hover:bg-gray-50'
           }`}
         >
           <HeartPulse className="w-4 h-4" />
@@ -323,82 +338,72 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
       {/* Profile Section */}
       {activeTab === 'profile' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-300">
-          {/* Logo Upload Card */}
-          <Card className="lg:col-span-1 border border-gray-100 shadow-sm bg-white">
+          <Card className="clinic-panel lg:col-span-1">
             <CardHeader>
-              <CardTitle className="text-lg">Clinic Logo</CardTitle>
-              <CardDescription>Upload clinic branding for the printed prescriptions.</CardDescription>
+              <CardTitle className="text-xl">Prescription branding</CardTitle>
+              <CardDescription>PNG or JPEG, up to 1 MB per image.</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center py-6">
-              <div className="relative w-32 h-32 rounded-2xl bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center overflow-hidden group mb-4">
+            <CardContent className="space-y-4">
+              <div className="grid size-24 place-items-center overflow-hidden rounded-2xl border bg-muted">
                 {logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={logoUrl} alt="Clinic Logo" className="w-full h-full object-contain" />
-                ) : (
-                  <HeartPulse className="w-12 h-12 text-gray-300" />
-                )}
-                
-                <label className="absolute inset-0 bg-black/40 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
-                  <Upload className="w-6 h-6 mb-1" />
-                  <span className="text-xs">Upload Logo</span>
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg"
-                    onChange={handleLogoUpload}
-                    disabled={logoUploading}
-                    className="hidden"
-                  />
-                </label>
+                  <img src={logoUrl} alt="Clinic logo" className="size-full object-contain p-2" />
+                ) : <HeartPulse aria-hidden="true" className="size-9 text-primary" />}
               </div>
-
-              <label className="block text-sm font-medium mt-4">Signature (PNG/JPEG, under 1 MB)
-                <input type="file" accept="image/png,image/jpeg" className="block min-h-11 mt-2 max-w-full" onChange={async e => {
-                  const file = e.target.files?.[0]
-                  if (!file) return
-                  const data = new FormData(); data.set('signature', file)
-                  try { await uploadSignature(data); setProfileMessage({ type: 'success', text: 'Private signature saved.' }); router.refresh() }
-                  catch (error) { setProfileMessage({ type: 'error', text: error instanceof Error ? error.message : 'Upload failed' }) }
-                  e.target.value = ''
+              <input ref={logoInput} hidden type="file" accept="image/png,image/jpeg" onChange={event => { void handleLogoUpload(event); event.currentTarget.value = '' }} />
+              <Button type="button" variant="outline" className="w-full justify-start" onClick={() => logoInput.current?.click()} disabled={logoUploading}>
+                <Upload aria-hidden="true" />{logoUploading ? 'Uploading logo…' : logoUrl ? 'Replace clinic logo' : 'Upload clinic logo'}
+              </Button>
+              <div className="space-y-2 border-t pt-4">
+                <p className="font-semibold">Doctor signature</p>
+                <p className="text-sm text-muted-foreground">Used on your printed prescriptions and stored privately.</p>
+                <input ref={signatureInput} hidden type="file" accept="image/png,image/jpeg" onChange={async event => {
+                  const file = event.currentTarget.files?.[0]
+                  event.currentTarget.value = ''
+                  if (!file || signatureUploading) return
+                  const data = new FormData()
+                  data.set('signature', file)
+                  setSignatureUploading(true)
+                  try {
+                    await uploadSignature(data)
+                    setProfileMessage({ type: 'success', text: 'Signature saved.' })
+                    router.refresh()
+                  } catch (error) {
+                    setProfileMessage({ type: 'error', text: error instanceof Error ? error.message : 'Upload failed' })
+                  } finally {
+                    setSignatureUploading(false)
+                  }
                 }} />
-              </label>
-              {logoUploading && <p className="text-sm text-gray-500 animate-pulse">Uploading branding...</p>}
-              {!logoUploading && !logoUrl && <p className="text-sm text-gray-400">No logo uploaded yet.</p>}
-              {!logoUploading && logoUrl && <p className="text-sm text-green-600">Logo active</p>}
+                <Button type="button" variant="outline" className="w-full justify-start" disabled={signatureUploading} onClick={() => signatureInput.current?.click()}>
+                  <Upload aria-hidden="true" />{signatureUploading ? 'Uploading signature…' : 'Upload signature'}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
           {/* Profile Form Card */}
-          <Card className="lg:col-span-2 border border-gray-100 shadow-sm bg-white">
+          <Card className="clinic-panel lg:col-span-2">
             <CardHeader>
               <CardTitle className="text-lg">Doctor & Clinic Details</CardTitle>
               <CardDescription>These details will automatically populate your generated PDFs.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleProfileSave} className="space-y-4">
-                {profileMessage && (
-                  <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
-                    profileMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-                  }`}>
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    {profileMessage.text}
-                  </div>
-                )}
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">Doctor&apos;s Name</label>
-                    <Input 
-                      value={name} 
-                      onChange={(e) => setName(e.target.value)} 
+                    <label htmlFor="settings-name" className="text-sm font-semibold text-foreground">Doctor&apos;s Name</label>
+                    <Input
+                      id="settings-name" value={name}
+                      onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. Jane Doe"
                       className="h-12 text-base"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">Medical License / Registration No.</label>
-                    <Input 
-                      value={license} 
-                      onChange={(e) => setLicense(e.target.value)} 
+                    <label htmlFor="settings-license" className="text-sm font-semibold text-foreground">Medical License / Registration No.</label>
+                    <Input
+                      id="settings-license" value={license}
+                      onChange={(e) => setLicense(e.target.value)}
                       placeholder="e.g. MD-12345"
                       className="h-12 text-base"
                     />
@@ -407,19 +412,19 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">Clinic Name</label>
-                    <Input 
-                      value={clinicName} 
-                      onChange={(e) => setClinicName(e.target.value)} 
+                    <label htmlFor="settings-clinicName" className="text-sm font-semibold text-foreground">Clinic Name</label>
+                    <Input
+                      id="settings-clinicName" value={clinicName}
+                      onChange={(e) => setClinicName(e.target.value)}
                       placeholder="e.g. Nivaa Care Clinic"
                       className="h-12 text-base"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-semibold text-gray-700">Clinic Phone Number</label>
-                    <Input 
-                      value={phone} 
-                      onChange={(e) => setPhone(e.target.value)} 
+                    <label htmlFor="settings-phone" className="text-sm font-semibold text-foreground">Clinic Phone Number</label>
+                    <Input
+                      id="settings-phone" value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
                       placeholder="e.g. +1 555 1234"
                       className="h-12 text-base"
                     />
@@ -427,10 +432,10 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700">Clinic Address</label>
-                  <Textarea 
-                    value={address} 
-                    onChange={(e) => setAddress(e.target.value)} 
+                  <label htmlFor="settings-address" className="text-sm font-semibold text-foreground">Clinic Address</label>
+                  <Textarea
+                    id="settings-address" value={address}
+                    onChange={(e) => setAddress(e.target.value)}
                     placeholder="e.g. Suite 400, Medical Plaza Road..."
                     className="min-h-[80px] text-base"
                   />
@@ -452,10 +457,10 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
         <div className="space-y-6 animate-in fade-in duration-300">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Disease Templates</h2>
-              <p className="text-sm text-gray-500">Save setups of common disease diagnosis & medicines to load with 1 click.</p>
+              <h2 className="text-xl font-bold text-foreground">Disease Templates</h2>
+              <p className="text-sm text-muted-foreground">Save setups of common disease diagnosis & medicines to load with 1 click.</p>
             </div>
-            
+
             <div className="flex flex-wrap gap-3">
               <Button
                 variant="outline"
@@ -477,8 +482,8 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
           {templates.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-xl border border-dashed border-gray-200">
               <HeartPulse className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <h3 className="font-semibold text-gray-800">No Templates Found</h3>
-              <p className="text-sm text-gray-500 max-w-sm mx-auto mt-1 mb-6">
+              <h3 className="font-semibold text-foreground">No Templates Found</h3>
+              <p className="text-sm text-muted-foreground max-w-sm mx-auto mt-1 mb-6">
                 Get started quickly by loading our premium default disease templates or design your own bespoke prescription flow.
               </p>
               <Button onClick={handlePreSeed} disabled={seeding} variant="outline">
@@ -498,14 +503,16 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
                         <CardTitle className="text-lg leading-snug">{t.name}</CardTitle>
                         <div className="flex items-center gap-1 shrink-0">
                           <button
+                            aria-label={`Edit ${t.name}`}
                             onClick={() => openEditSheet(t)}
-                            className="p-2 text-gray-400 hover:text-primary hover:bg-gray-50 rounded-lg transition-colors"
+                            className="min-h-11 min-w-11 grid place-items-center text-muted-foreground hover:text-primary hover:bg-gray-50 rounded-lg transition-colors"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
+                            aria-label={`Delete ${t.name}`}
                             onClick={() => handleDeleteTemplate(t.id)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="min-h-11 min-w-11 grid place-items-center text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -516,10 +523,10 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-0">
-                      <p className="text-sm text-gray-600 mb-2 font-medium">{meds.length} Medicine{meds.length !== 1 ? 's' : ''} saved</p>
+                      <p className="text-sm text-muted-foreground mb-2 font-medium">{meds.length} Medicine{meds.length !== 1 ? 's' : ''} saved</p>
                       <div className="flex flex-wrap gap-1">
                         {meds.slice(0, 3).map((m: RxMedicine, idx: number) => (
-                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded bg-gray-50 border border-gray-100 text-xs text-gray-600">
+                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded bg-gray-50 border border-gray-100 text-xs text-muted-foreground">
                             {m.name}
                           </span>
                         ))}
@@ -549,9 +556,9 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Template Title</label>
+                <label htmlFor="settings-templateName" className="text-sm font-semibold text-foreground">Template Title</label>
                 <Input
-                  value={templateName}
+                  id="settings-templateName" value={templateName}
                   onChange={(e) => setTemplateName(e.target.value)}
                   placeholder="e.g. URTI Package, Gastritis Standard..."
                   className="h-12"
@@ -559,9 +566,9 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Standard Diagnosis</label>
+                <label htmlFor="settings-templateDiagnosis" className="text-sm font-semibold text-foreground">Standard Diagnosis</label>
                 <Input
-                  value={templateDiagnosis}
+                  id="settings-templateDiagnosis" value={templateDiagnosis}
                   onChange={(e) => setTemplateDiagnosis(e.target.value)}
                   placeholder="e.g. Acute Gastroenteritis"
                   className="h-12"
@@ -570,16 +577,16 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
 
               {/* Medicine items config in template */}
               <div className="space-y-3 pt-2">
-                <label className="text-sm font-semibold text-gray-700 block">Saved Medicines Package</label>
+                <label className="text-sm font-semibold text-foreground block">Saved Medicines Package</label>
 
                 {/* Display added medicines */}
                 <div className="space-y-2">
                   {templateMedicines.map((med, idx) => (
                     <div key={med.id} className="p-3 bg-gray-50 border rounded-lg flex justify-between items-start gap-4">
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-800 text-sm truncate">{idx + 1}. {med.name}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{med.dosage} • {med.frequency} • {med.duration}</p>
-                        {med.instructions && <p className="text-xs text-gray-400 mt-1">Note: {med.instructions}</p>}
+                        <p className="font-semibold text-foreground text-sm truncate">{idx + 1}. {med.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{med.dosage} • {med.frequency} • {med.duration}</p>
+                        {med.instructions && <p className="text-xs text-muted-foreground mt-1">Note: {med.instructions}</p>}
                       </div>
                       <button
                         onClick={() => handleRemoveMedicineFromTemplate(med.id)}
@@ -593,8 +600,8 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
 
                 {/* Medicine Search Autocomplete inside Sheet */}
                 <div className="p-4 border rounded-xl bg-white space-y-4 shadow-sm">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Configure Rx Pack Item</p>
-                  
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Configure Rx Pack Item</p>
+
                   {!selectedMed ? (
                     <Popover open={medPopoverOpen} onOpenChange={setMedPopoverOpen}>
                       <PopoverTrigger
@@ -603,7 +610,7 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
                             variant="outline"
                             role="combobox"
                             aria-expanded={medPopoverOpen}
-                            className="w-full h-12 justify-between font-normal text-gray-500"
+                            className="w-full h-12 justify-between font-normal text-muted-foreground"
                           >
                             Search medicine brand/generic...
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -619,7 +626,7 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
                             className="h-12"
                           />
                           <CommandList>
-                            {searchLoading && <div className="p-4 text-sm text-gray-500 text-center">Searching pharmacy list...</div>}
+                            {searchLoading && <div className="p-4 text-sm text-muted-foreground text-center">Searching pharmacy list...</div>}
                             {!searchLoading && medSearch && searchResults.length === 0 && (
                               <CommandEmpty>No medicine matches.</CommandEmpty>
                             )}
@@ -636,8 +643,8 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
                                     className="py-3 cursor-pointer"
                                   >
                                     <div className="flex flex-col">
-                                      <span className="font-semibold text-gray-800">{med.name}</span>
-                                      {med.generic && <span className="text-xs text-gray-500">{med.generic}</span>}
+                                      <span className="font-semibold text-foreground">{med.name}</span>
+                                      {med.generic && <span className="text-xs text-muted-foreground">{med.generic}</span>}
                                     </div>
                                   </CommandItem>
                                 ))}
@@ -652,7 +659,7 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
                       <div className="flex justify-between items-center bg-primary/5 p-3 rounded-lg border border-primary/20">
                         <div>
                           <p className="font-semibold text-primary text-sm">{selectedMed.name}</p>
-                          {selectedMed.generic && <p className="text-xs text-gray-500">{selectedMed.generic}</p>}
+                          {selectedMed.generic && <p className="text-xs text-muted-foreground">{selectedMed.generic}</p>}
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => setSelectedMed(null)} className="h-8">
                           Change
@@ -661,7 +668,7 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <label className="text-xs font-semibold text-gray-500">Dosage</label>
+                          <label className="text-xs font-semibold text-muted-foreground">Dosage</label>
                           <Input
                             placeholder="1 tab / 5ml"
                             value={medDosage}
@@ -670,7 +677,7 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs font-semibold text-gray-500">Frequency</label>
+                          <label className="text-xs font-semibold text-muted-foreground">Frequency</label>
                           <Select value={medFrequency} onValueChange={(val) => { if (val) setMedFrequency(val) }}>
                             <SelectTrigger className="h-10 text-sm">
                               <SelectValue />
@@ -686,7 +693,7 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
                           </Select>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs font-semibold text-gray-500">Duration</label>
+                          <label className="text-xs font-semibold text-muted-foreground">Duration</label>
                           <Input
                             placeholder="5 Days / 1 Month"
                             value={medDuration}
@@ -695,7 +702,7 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs font-semibold text-gray-500">Instructions</label>
+                          <label className="text-xs font-semibold text-muted-foreground">Instructions</label>
                           <Input
                             placeholder="After food"
                             value={medInstructions}

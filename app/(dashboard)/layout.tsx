@@ -27,16 +27,17 @@ export default async function DashboardLayout({
         logoUrl={doctor?.logoUrl}
       />
       
-      <div className="flex h-screen bg-gray-50 overflow-hidden">
+      <div className="flex h-dvh bg-background overflow-hidden">
         {/* Sidebar (iPad & Desktop) */}
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:rounded-lg focus:bg-card focus:p-3">Skip to main content</a>
         <Sidebar />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative pb-16 md:pb-0">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pb-0">
           <Header actionSlot={headerAction} />
           
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-safe">
-            <div className="max-w-6xl mx-auto h-full">
+          <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto px-4 py-5 sm:px-7 sm:py-7 lg:px-8">
+            <div className="max-w-[90rem] mx-auto min-w-0">
               {children}
             </div>
           </main>

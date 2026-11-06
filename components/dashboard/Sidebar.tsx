@@ -2,77 +2,51 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Users, FileText, ClipboardList, Settings, LogOut } from 'lucide-react'
+import { Activity, Users, FileText, ClipboardList, Settings, LogOut } from 'lucide-react'
 import { useClinicStore } from '@/stores/clinicStore'
 import { signOut } from '@/actions/auth.actions'
 import { Button } from '@/components/ui/button'
 
-const NAV_ITEMS = [
-  { name: 'Patients', href: '/patients', icon: Users },
-  { name: 'New Prescription', href: '/prescriptions/new', icon: FileText },
-  { name: 'Templates', href: '/templates', icon: ClipboardList },
-  { name: 'Settings', href: '/settings', icon: Settings },
+export const clinicNavigation = [
+  { name: 'Patients', short: 'Patients', href: '/patients', icon: Users },
+  { name: 'New prescription', short: 'Prescribe', href: '/prescriptions/new', icon: FileText },
+  { name: 'Templates', short: 'Templates', href: '/templates', icon: ClipboardList },
+  { name: 'Settings', short: 'Settings', href: '/settings', icon: Settings },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const doctorName = useClinicStore((state) => state.doctorName)
-
-  const getInitials = (name: string | null) => {
-    if (!name) return 'DR'
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2)
-  }
+  const doctorName = useClinicStore(state => state.doctorName)
+  const clinicName = useClinicStore(state => state.clinicName)
+  const initials = doctorName?.trim().split(/\s+/).map(word => word[0]).join('').slice(0, 2).toUpperCase() || 'DR'
 
   return (
-    <div className="hidden md:flex w-64 flex-col bg-white border-r h-full overflow-hidden">
-      <div className="p-6 border-b">
-        <h1 className="text-2xl font-bold text-primary">Clinic App</h1>
-      </div>
+    <aside className="hidden lg:flex w-56 xl:w-64 shrink-0 flex-col border-r bg-sidebar">
+      <Link href="/patients" className="m-4 mb-5 flex min-h-12 items-center gap-3 rounded-xl p-2">
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground"><Activity aria-hidden="true" className="size-6" /></span>
+        <span className="min-w-0"><span className="block text-xl font-semibold tracking-tight">Nivaa</span><span className="block truncate text-sm text-muted-foreground">{clinicName || 'Clinic workspace'}</span></span>
+      </Link>
 
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
-          const isActive = pathname.startsWith(item.href)
-          const Icon = item.icon
+      <nav aria-label="Clinic navigation" className="flex-1 space-y-2 overflow-y-auto px-3">
+        <p className="clinic-kicker px-3 pb-2">Workspace</p>
+        {clinicNavigation.map(({ name, href, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(href + '/')
           return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center gap-3 px-4 min-h-12 rounded-lg transition-colors ${
-                isActive
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <Icon className="w-5 h-5" />
-              <span>{item.name}</span>
+            <Link key={href} href={href} aria-current={active ? 'page' : undefined}
+              className={`flex min-h-12 items-center gap-3 rounded-xl px-3 font-medium ${active ? 'bg-accent text-accent-foreground font-semibold' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
+              <Icon aria-hidden="true" className="size-5 shrink-0" />{name}
             </Link>
           )
         })}
       </nav>
 
-      <div className="p-4 border-t bg-gray-50">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">
-            {getInitials(doctorName)}
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <p className="text-sm font-medium truncate">{doctorName || 'Doctor'}</p>
-          </div>
+      <div className="space-y-3 border-t p-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-secondary font-semibold text-secondary-foreground">{initials}</span>
+          <div className="min-w-0"><p className="truncate font-semibold">{doctorName || 'Doctor'}</p><p className="text-sm text-muted-foreground">Signed in</p></div>
         </div>
-        <Button
-          variant="outline"
-          className="w-full justify-start gap-2 text-gray-600 h-10"
-          onClick={() => signOut()}
-        >
-          <LogOut className="w-4 h-4" />
-          Sign Out
-        </Button>
+        <Button variant="outline" className="w-full justify-start" onClick={() => signOut()}><LogOut aria-hidden="true" />Sign out</Button>
       </div>
-    </div>
+    </aside>
   )
 }

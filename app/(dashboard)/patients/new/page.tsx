@@ -13,6 +13,7 @@ export default function NewPatientPage() {
 
   return (
     <div className="max-w-2xl mx-auto py-6">
+      <div className="mb-6"><p className="clinic-kicker mb-2">Patient records</p><h1 className="clinic-heading">Add patient</h1><p className="mt-2 text-muted-foreground">Enter the patient’s contact details and any known allergies.</p></div>
       <PatientForm />
     </div>
   )

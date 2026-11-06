@@ -61,13 +61,13 @@ export default function DiseaseTemplateSelector({ templates }: DiseaseTemplateSe
     <>
       <div className="flex flex-wrap items-center gap-3" aria-label="Prescription templates">
         {templates.slice(0, 5).map(template => (
-          <Button key={template.id} variant="outline" className="min-h-11" onClick={() => handleSelect(template.id)}>{template.name}</Button>
+          <Button key={template.id} variant="outline" className="min-h-11 max-w-full whitespace-normal text-left" onClick={() => handleSelect(template.id)}>{template.name}</Button>
         ))}
-        <Select onValueChange={handleSelect}>
-          <SelectTrigger className="w-[280px] h-12 bg-white text-base">
+        {templates.length > 5 && <Select onValueChange={handleSelect}>
+          <SelectTrigger className="w-fit max-w-full h-12 bg-card text-base">
             <div className="flex items-center gap-2 text-primary">
               <BookTemplate className="w-4 h-4" />
-              <SelectValue placeholder="Load saved template..." />
+              <SelectValue placeholder="All templates" />
             </div>
           </SelectTrigger>
           <SelectContent>
@@ -77,7 +77,7 @@ export default function DiseaseTemplateSelector({ templates }: DiseaseTemplateSe
               </SelectItem>
             ))}
           </SelectContent>
-        </Select>
+        </Select>}
       </div>
 
       <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>

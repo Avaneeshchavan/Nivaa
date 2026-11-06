@@ -93,7 +93,7 @@ export default function RxPDFDocument({ doctor, patient, prescription, clinicNam
           <View style={styles.headerLeft}>
             {logoUrl && <Image src={logoUrl} style={{ width: 50, height: 50, marginBottom: 8 }} />}
             <Text style={styles.clinicName}>{clinicName}</Text>
-            <Text style={styles.doctorName}>Dr. {doctor.name}</Text>
+            <Text style={styles.doctorName}>{doctor.name && (/^dr\.?\s/i.test(doctor.name) ? doctor.name : `Dr. ${doctor.name}`)}</Text>
             <Text style={styles.doctorDetails}>{doctor.email}</Text>
             {doctor.license && <Text style={styles.doctorDetails}>Reg: {doctor.license}</Text>}
             {doctor.address && <Text style={styles.doctorDetails}>{doctor.address}</Text>}
@@ -167,7 +167,7 @@ export default function RxPDFDocument({ doctor, patient, prescription, clinicNam
           <View style={styles.signatureBox}>
             {signatureUrl && <Image src={signatureUrl} style={{ width: 100, height: 35, objectFit: 'contain' }} />}
             <View style={styles.signatureLine} />
-            <Text style={{ fontSize: 9, fontWeight: 'bold' }}>Dr. {doctor.name}</Text>
+            <Text style={{ fontSize: 9, fontWeight: 'bold' }}>{doctor.name && (/^dr\.?\s/i.test(doctor.name) ? doctor.name : `Dr. ${doctor.name}`)}</Text>
             <Text style={styles.footerText}>Signature</Text>
           </View>
         </View>

@@ -2,35 +2,19 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Users, FileText, Settings } from 'lucide-react'
-
-const NAV_ITEMS = [
-  { name: 'Patients', href: '/patients', icon: Users },
-  { name: 'Prescribe', href: '/prescriptions/new', icon: FileText },
-  { name: 'Settings', href: '/settings', icon: Settings },
-]
+import { clinicNavigation } from './Sidebar'
 
 export default function BottomNav() {
   const pathname = usePathname()
-
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t pb-safe flex justify-around items-center h-16 z-50">
-      {NAV_ITEMS.map((item) => {
-        const isActive = pathname.startsWith(item.href)
-        const Icon = item.icon
-        return (
-          <Link
-            key={item.name}
-            href={item.href}
-            className={`flex flex-col items-center justify-center w-full min-h-12 ${
-              isActive ? 'text-primary' : 'text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            <Icon className="w-5 h-5 mb-1" />
-            <span className="text-[10px] font-medium">{item.name}</span>
-          </Link>
-        )
+    <nav aria-label="Clinic navigation" className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t bg-sidebar px-1 pt-1 pb-safe lg:hidden">
+      {clinicNavigation.map(({ short, href, icon: Icon }) => {
+        const active = pathname === href || pathname.startsWith(href + '/')
+        return <Link key={href} href={href} aria-current={active ? 'page' : undefined}
+          className={`mx-0.5 mb-1 flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-xs sm:text-sm font-semibold ${active ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted'}`}>
+          <Icon aria-hidden="true" className="size-5" />{short}
+        </Link>
       })}
-    </div>
+    </nav>
   )
 }

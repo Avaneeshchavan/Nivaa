@@ -40,6 +40,7 @@ export default function EditPatientPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="max-w-2xl mx-auto py-6">
+      <div className="mb-6"><p className="clinic-kicker mb-2">Patient records</p><h1 className="clinic-heading">Edit patient</h1><p className="mt-2 text-muted-foreground">Update contact information and allergy notes.</p></div>
       <PatientForm
         initialData={{
           ...patient,

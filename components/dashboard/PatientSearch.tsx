@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { Search } from 'lucide-react'
 import Link from 'next/link'
 import { getPatients } from '@/actions/patients.actions'
 import { Button } from '@/components/ui/button'
@@ -29,7 +30,7 @@ export default function PatientSearch() {
     return () => { cancelled = true; clearTimeout(timer) }
   }, [open, query])
   return <>
-    <Button variant="outline" className="min-h-11" onClick={() => setOpen(true)}>Search patients <kbd className="hidden md:inline">⌘/Ctrl K</kbd></Button>
+    <Button variant="outline" className="min-h-11 px-3" aria-label="Find a patient" onClick={() => setOpen(true)}><Search aria-hidden="true" /><span className="hidden sm:inline">Find patient</span><kbd className="hidden xl:inline rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">⌘ / Ctrl K</kbd></Button>
     <Dialog open={open} onOpenChange={setOpen}><DialogContent>
       <DialogTitle>Find a patient</DialogTitle>
       <Input autoFocus className="h-12" aria-label="Search patients" placeholder="Name, phone, diagnosis, medicine" value={query} onChange={e => setQuery(e.target.value)} />

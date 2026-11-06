@@ -1,10 +1,10 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { buttonVariants } from '@/components/ui/button'
 import SearchInput from './SearchInput'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { ArrowRight, CalendarDays, FileText, Phone, Plus, Users } from 'lucide-react'
 import { format } from 'date-fns'
 
 
@@ -40,51 +40,61 @@ export default function PatientDirectory({ initialPatients }: { initialPatients:
   }
 
   return (
-    <div className="space-y-6 relative min-h-full">
-      <div className="sticky top-16 z-30 bg-gray-50 pb-4 pt-2 -mx-4 px-4 md:mx-0 md:px-0">
-        <SearchInput onSearch={handleSearch} />
-      </div>
-
-      {error && <p role="alert" className="text-red-600">{error}</p>}
-      <p role="status" className="text-sm text-gray-500">{loading ? 'Searching...' : `${patients.length} patients${patients.length === 50 ? ' · refine search for more' : ''}`}</p>
-      {patients.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">
-          <p className="text-lg font-medium">No patients found</p>
-          <p className="text-sm">Try adjusting your search or add a new patient.</p>
+    <div className="space-y-6">
+      <section className="flex flex-wrap items-end justify-between gap-4 rounded-2xl border bg-gradient-to-br from-card to-secondary p-5 sm:p-8">
+        <div>
+          <p className="clinic-kicker mb-2">Clinic workspace</p>
+          <h1 className="clinic-heading">Patients</h1>
+          <p className="mt-2 text-base text-muted-foreground">Find a patient, review their visits, or start a prescription.</p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-24">
-          {patients.map((patient) => {
-            const lastVisit = patient.visits[0]
-            return (
-              <Link key={patient.id} href={`/patients/${patient.id}`}>
-                <Card className="hover:shadow-md transition-shadow active:scale-[0.98]">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">{patient.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-sm text-gray-600 space-y-1">
-                    <p>
-                      <span className="font-medium">Phone:</span> {patient.phone || 'N/A'}
-                    </p>
-                    <p>
-                      <span className="font-medium">Last Visit:</span>{' '}
-                      {lastVisit ? format(new Date(lastVisit.date), 'MMM d, yyyy') : 'Never'}
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
-            )
-          })}
-        </div>
-      )}
+        <Link href="/patients/new" className={buttonVariants({ size: 'lg' })}><Plus aria-hidden="true" />Add patient</Link>
+      </section>
 
-      {/* FAB - Floating Action Button */}
-      <Link
-        href="/patients/new"
-        className="fixed bottom-20 md:bottom-8 right-4 md:right-8 h-14 w-14 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all z-50"
-      >
-        <Plus className="w-6 h-6" />
-      </Link>
+      <section aria-labelledby="patient-directory" className="clinic-panel min-w-0">
+        <div className="space-y-4 border-b p-4 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 id="patient-directory" className="text-xl font-semibold">Patient directory</h2>
+            <p role="status" className="rounded-full bg-muted px-3 py-1 text-sm font-medium text-muted-foreground">
+              {loading ? 'Searching…' : patients.length === 50 ? '50 results · refine your search' : `${patients.length} ${patients.length === 1 ? 'patient' : 'patients'}`}
+            </p>
+          </div>
+          <SearchInput onSearch={handleSearch} />
+          {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-900">{error}</p>}
+        </div>
+
+        {patients.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 px-5 py-12 text-center">
+            <span className="grid size-14 place-items-center rounded-2xl bg-secondary text-primary"><Users aria-hidden="true" /></span>
+            <h3 className="text-xl font-semibold">{loading ? 'Looking up patients' : 'No patients found'}</h3>
+            <p className="text-muted-foreground">Search by a different name or add a patient to begin.</p>
+          </div>
+        ) : (
+          <ul aria-busy={loading} className="divide-y">
+            {patients.map(patient => {
+              const lastVisit = patient.visits[0]
+              const initials = patient.name.trim().split(/\s+/).map(word => word[0]).join('').slice(0, 2).toUpperCase()
+              return (
+                <li key={patient.id} className="flex flex-wrap items-center gap-2 px-4 py-3 sm:px-6">
+                  <Link href={`/patients/${patient.id}`} className="group flex min-h-16 min-w-0 flex-1 basis-52 items-center gap-3 rounded-xl py-2 hover:bg-muted sm:px-2">
+                    <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-accent font-semibold text-primary">{initials}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block break-words text-lg font-semibold">{patient.name}</span>
+                      <span className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5"><Phone aria-hidden="true" className="size-4" />{patient.phone || 'No phone'}</span>
+                        <span className="inline-flex items-center gap-1.5"><CalendarDays aria-hidden="true" className="size-4" />{lastVisit ? `Last visit ${format(new Date(lastVisit.date), 'dd MMM yyyy')}` : 'No visits yet'}</span>
+                      </span>
+                    </span>
+                    <ArrowRight aria-hidden="true" className="mr-2 size-5 shrink-0 text-primary" />
+                  </Link>
+                  <Link aria-label={`New prescription for ${patient.name}`} href={`/prescriptions/new?patientId=${patient.id}`} className={buttonVariants({ variant: 'secondary', className: 'max-sm:ml-14' })}>
+                    <FileText aria-hidden="true" />New Rx
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   )
 }

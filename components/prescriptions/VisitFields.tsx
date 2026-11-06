@@ -12,11 +12,11 @@ const fields = [
 
 export default function VisitFields({ value, onChange }: { value: VisitFormValues; onChange: (value: VisitFormValues) => void }) {
   return (
-    <fieldset className="bg-white p-4 rounded-lg border space-y-3">
-      <legend className="font-semibold px-1">Today&apos;s measurements (optional)</legend>
+    <fieldset className="min-w-0">
+      <legend className="sr-only">Today&apos;s measurements (optional)</legend>
       <div className="grid grid-cols-2 gap-3">
         {fields.map(field => (
-          <label key={field.name} className="text-sm font-medium">{field.label}
+          <label key={field.name} className="text-base font-medium">{field.label}
             <Input className="h-12 mt-1" type={field.name === 'bloodPressure' ? 'text' : 'number'}
               inputMode={field.name === 'bloodPressure' ? 'text' : 'decimal'}
               step={'step' in field ? field.step : undefined}

@@ -6,7 +6,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { format } from 'date-fns'
-import { Edit, FileText, Calendar, Activity } from 'lucide-react'
+import { ArrowLeft, Edit, FileText, Calendar, Activity } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function PatientDetailsPage({
@@ -20,47 +20,43 @@ export default async function PatientDetailsPage({
   return (
     <div className="space-y-6 pb-20 md:pb-0">
       <HeaderSetter title={patient.name} />
-      <AllergiesBanner allergies={patient.allergies} />
+      <Link href="/patients" className={buttonVariants({ variant: 'ghost', className: '-ml-3 text-primary' })}><ArrowLeft aria-hidden="true" />All patients</Link>
 
       {/* Top Section */}
-      <Card className="border-none shadow-sm bg-white">
+      <Card className="clinic-panel">
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">{patient.name}</h2>
-              <p className="text-gray-500 mt-1">
-                {patient.gender} • {patient.dob ? format(new Date(patient.dob), 'MMM d, yyyy') : 'DOB N/A'}
+              <p className="clinic-kicker mb-2">Patient record</p>
+              <h1 className="clinic-heading break-words">{patient.name}</h1>
+              <p className="text-muted-foreground mt-2">
+                {patient.gender ? patient.gender[0] + patient.gender.slice(1).toLowerCase() : 'Gender not recorded'} · {patient.dob ? format(new Date(patient.dob), 'MMM d, yyyy') : 'DOB N/A'}
               </p>
             </div>
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <Link href={`/prescriptions/new?patientId=${patient.id}`} className="w-full md:w-auto">
-                <Button className="w-full md:w-auto gap-2 h-12 md:h-10">
-                  <FileText className="w-4 h-4" />
-                  New Prescription
-                </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link href={`/prescriptions/new?patientId=${patient.id}`} className={buttonVariants({ size: 'lg' })}>
+                <FileText aria-hidden="true" />New prescription
               </Link>
-              <Link href={`/patients/${patient.id}/edit`}>
-                <Button variant="outline" size="icon" className="h-12 w-12 md:h-10 md:w-10">
-                  <Edit className="w-4 h-4" />
-                </Button>
+              <Link href={`/patients/${patient.id}/edit`} className={buttonVariants({ variant: 'outline', size: 'lg' })}>
+                <Edit aria-hidden="true" />Edit patient
               </Link>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tabs Section */}
+      <AllergiesBanner allergies={patient.allergies} />
       <Tabs defaultValue="visits" className="w-full">
-        <TabsList className="w-full justify-start border-b bg-transparent h-auto p-0 rounded-none mb-6">
+        <TabsList className="grid w-full sm:w-fit grid-cols-2 gap-1 rounded-xl bg-secondary p-1 mb-4">
           <TabsTrigger
             value="visits"
-            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-6 py-3 text-base"
+            className="min-h-12 whitespace-normal rounded-lg px-3 sm:px-6 py-2 text-base"
           >
             Visits & Prescriptions
           </TabsTrigger>
           <TabsTrigger
             value="details"
-            className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-6 py-3 text-base"
+            className="min-h-12 whitespace-normal rounded-lg px-3 sm:px-6 py-2 text-base"
           >
             Details
           </TabsTrigger>
@@ -68,10 +64,10 @@ export default async function PatientDetailsPage({
 
         <TabsContent value="visits" className="space-y-4 outline-none">
           {patient.visits.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg border border-dashed">
-              <Calendar className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">No previous visits</p>
-              <p className="text-sm text-gray-400">Start by creating a new prescription.</p>
+            <div className="clinic-panel text-center px-4 py-10">
+              <Calendar className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground font-medium">No previous visits</p>
+              <p className="text-sm text-muted-foreground">Start by creating a new prescription.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -88,13 +84,13 @@ export default async function PatientDetailsPage({
                           <Activity className="w-6 h-6 text-primary" />
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-900">
+                          <p className="font-semibold text-foreground">
                             {format(new Date(visit.date), 'MMMM d, yyyy')}
                           </p>
-                          <p className="text-gray-600 text-sm mt-1">
+                          <p className="text-muted-foreground text-sm mt-1">
                             {visit.diagnosis || 'No diagnosis recorded'}
                           </p>
-                          {formatVisitMeasurements(visit) && <p className="text-sm text-gray-600 mt-1">{formatVisitMeasurements(visit)}</p>}
+                          {formatVisitMeasurements(visit) && <p className="text-sm text-muted-foreground mt-1">{formatVisitMeasurements(visit)}</p>}
                         </div>
                       </div>
                       <div className="w-full sm:w-auto space-y-2">
@@ -127,15 +123,15 @@ export default async function PatientDetailsPage({
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-1">Phone Number</h4>
-                  <p className="text-gray-900">{patient.phone || 'Not provided'}</p>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Phone Number</h4>
+                  <p className="text-foreground">{patient.phone || 'Not provided'}</p>
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-1">Address</h4>
-                  <p className="text-gray-900">{patient.address || 'Not provided'}</p>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Address</h4>
+                  <p className="text-foreground">{patient.address || 'Not provided'}</p>
                 </div>
                 <div className="sm:col-span-2">
-                  <h4 className="text-sm font-medium text-gray-500 mb-1">Allergies & Notes</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Allergies & Notes</h4>
                   <div className="p-4 bg-red-50 text-red-800 rounded-md text-sm border border-red-100">
                     {patient.allergies || 'No known allergies'}
                   </div>

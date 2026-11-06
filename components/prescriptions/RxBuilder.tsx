@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import Toast from '@/components/ui/Toast'
 import type { DuplicateRxDraft } from '@/lib/validations/prescription.schema'
-import { Printer, Save } from 'lucide-react'
+import { ChevronDown, Printer, Save, UserRound } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface RxBuilderProps {
@@ -34,17 +34,19 @@ interface RxBuilderProps {
 
 export default function RxBuilder({ initialPatientId, patients, templates, duplicate, doctor, assets, draftKey, savedDraft }: RxBuilderProps) {
   const router = useRouter()
-  const { 
+  const {
     visit, setVisit,
-    patientId, setPatientId, 
-    diagnosis, setDiagnosis, 
-    medicines, notes, setNotes, 
-    reset 
+    patientId, setPatientId,
+    diagnosis, setDiagnosis,
+    medicines, notes, setNotes,
+    reset
   } = useRxBuilderStore()
 
   const [paperSize, setPaperSize] = useState<'A4' | 'A5'>('A5')
   const [saving, setSaving] = useState(false)
   const [visitError, setVisitError] = useState('')
+  const [saveError, setSaveError] = useState('')
+  const [visitOpen, setVisitOpen] = useState(false)
   const selectedPatient = patients.find(p => p.id === patientId)
 
   const [toast, setToast] = useState('')
@@ -70,17 +72,21 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
 
   const handleSave = async (print: boolean) => {
     if (!patientId) {
-      alert('Please select a patient first.')
+      setSaveError('Select a patient before saving.')
       return
     }
 
     const measurements = visitFormSchema.safeParse(visit)
     if (!measurements.success) {
+      setVisitOpen(true)
       setVisitError(measurements.error.issues.map(issue => `${String(issue.path[0])}: ${issue.message}`).join(' · '))
       return
     }
     setVisitError('')
+    setSaveError('')
     setSaving(true)
+    const printTab = print ? window.open('about:blank', '_blank') : null
+    if (printTab) printTab.opener = null
     try {
       const rx = await createPrescription({
         patientId,
@@ -89,77 +95,74 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
         visit: measurements.data,
         notes
       })
-      
+
       try { await autosave.complete() } catch { setToast('Prescription saved; old draft could not be cleared.') }
       if (print) {
-        window.open(`/api/prescriptions/${rx.id}/pdf?size=${paperSize}`, '_blank')
+        const pdfUrl = `/api/prescriptions/${rx.id}/pdf?size=${paperSize}`
+        if (printTab) printTab.location.replace(pdfUrl)
+        else { window.location.assign(pdfUrl); return }
       }
-      
+
       router.push(`/patients/${patientId}`)
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error saving prescription')
+    } catch {
+      printTab?.close()
+      setSaveError('The prescription could not be saved. Check the entries and try again.')
       setSaving(false)
     }
   }
 
+  const canSave = Boolean(patientId && (diagnosis.trim() || medicines.length) && !saving)
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full pb-20 md:pb-0">
-      
-      <p role="status" className="col-span-full text-sm text-gray-500">{autosave.status}</p>
-      {toast && <Toast message={toast} onDismiss={dismissToast} />}
-      {/* LEFT PANEL: Form */}
-      <div className="space-y-6 animate-in fade-in duration-300">
-        
-        <AllergiesBanner allergies={selectedPatient?.allergies} />
-        <p className="text-sm text-gray-600">{selectedPatient?.name} · {new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
-        {/* Patient Selection (If not pre-filled from URL) */}
-        {!initialPatientId && (
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-            <label className="text-sm font-semibold text-gray-700 block mb-2">Select Patient</label>
-            <Select value={patientId || undefined} onValueChange={setPatientId}>
-              <SelectTrigger className="w-full h-12 bg-gray-50 text-base">
-                <SelectValue placeholder="Search or select patient..." />
-              </SelectTrigger>
-              <SelectContent>
-                {patients.map(p => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name} {p.phone ? `(${p.phone})` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        <label className="block text-sm font-medium">Paper size
-          <select className="block min-h-11 border rounded px-3 bg-white" value={paperSize} onChange={e => setPaperSize(e.target.value === 'A4' ? 'A4' : 'A5')}><option>A5</option><option>A4</option></select>
-        </label>
-        <VisitFields value={visit} onChange={value => { setVisit(value); setVisitError('') }} />
-        {visitError && <p role="alert" className="text-red-600">{visitError}</p>}
-        {/* Diagnosis & Templates */}
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-            <label className="text-sm font-semibold text-gray-700 block">Diagnosis</label>
-            <DiseaseTemplateSelector templates={templates} />
-          </div>
-          <Input 
-            value={diagnosis} 
-            onChange={(e) => setDiagnosis(e.target.value)} 
-            placeholder="e.g. Viral Fever, Hypertension..."
-            className="h-12 text-base"
-          />
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="clinic-kicker mb-2">Prescriptions</p>
+          <h1 className="clinic-heading">New prescription</h1>
         </div>
+        <p role="status" className="text-sm font-medium text-muted-foreground">{autosave.status}</p>
+      </div>
+      {toast && <Toast message={toast} onDismiss={dismissToast} />}
 
-        {/* Medicines List */}
-        <div className="space-y-4">
-          <label className="text-sm font-semibold text-gray-700 block">Prescription Items</label>
-          
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-5">
+          <section className="clinic-panel p-4 sm:p-5" aria-labelledby="rx-patient-heading">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-secondary text-primary"><UserRound aria-hidden="true" className="size-5" /></span>
+                <div className="min-w-0"><h2 id="rx-patient-heading" className="text-lg font-semibold break-words">{selectedPatient?.name || 'Choose a patient'}</h2>
+                <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium' })}</p></div>
+              </div>
+              {!initialPatientId && (
+                <Select value={patientId || undefined} onValueChange={setPatientId}>
+                  <SelectTrigger aria-label="Choose patient" className="w-full sm:max-w-xs"><SelectValue placeholder="Select patient" /></SelectTrigger>
+                  <SelectContent>
+                    {patients.map(p => <SelectItem key={p.id} value={p.id}>{p.name}{p.phone ? ` · ${p.phone}` : ''}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            {selectedPatient?.allergies && <div className="mt-4"><AllergiesBanner allergies={selectedPatient.allergies} /></div>}
+          </section>
+
+          <section className="clinic-panel space-y-4 p-4 sm:p-5">
+            <label htmlFor="rx-diagnosis" className="block text-lg font-semibold">Diagnosis</label>
+            <Input id="rx-diagnosis" value={diagnosis} onChange={event => setDiagnosis(event.target.value)} placeholder="Enter a diagnosis" />
+            <DiseaseTemplateSelector templates={templates} />
+          </section>
+
+          <section className="clinic-panel space-y-4 p-4 sm:p-5" aria-labelledby="rx-medicines-heading">
+            <div className="flex items-center justify-between gap-3">
+              <h2 id="rx-medicines-heading" className="text-lg font-semibold">Medicines</h2>
+              <span className="rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">{medicines.length} added</span>
+            </div>
+            <MedicineAutocomplete />
           <div className="space-y-3">
             {medicines.map((med, idx) => (
-              <div key={med.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex flex-wrap justify-between items-start gap-4 animate-in slide-in-from-bottom-2">
+              <div key={med.id} className="bg-muted/60 p-4 rounded-xl border flex flex-wrap justify-between items-start gap-4 animate-in slide-in-from-bottom-2">
                 <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900">{idx + 1}. {med.name}</h4>
-                  <div className="text-sm text-gray-600 flex flex-wrap gap-x-3 mt-1">
+                  <h4 className="font-semibold text-foreground">{idx + 1}. {med.name}</h4>
+                  <div className="text-sm text-muted-foreground flex flex-wrap gap-x-3 mt-1">
                     <span>{med.dosage}</span>
                     <span>•</span>
                     <span>{med.frequency}</span>
@@ -171,15 +174,15 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
                   {editingMedicine === med.id ? 'Done' : 'Edit'}
                 </Button>
                 <Button
-                  variant="ghost" 
-                  size="sm" 
-                  className="min-h-11 text-red-500 hover:text-red-700 hover:bg-red-50"
+                  variant="ghost"
+                  size="sm"
+                  className="min-h-11 text-red-800 hover:text-red-700 hover:bg-red-50"
                   onClick={() => useRxBuilderStore.getState().removeMedicine(med.id)}
                 >
                   Remove
                 </Button>
                 {editingMedicine === med.id && (
-                  <div className="grid grid-cols-2 gap-3 w-full">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                     {(['name', 'dosage', 'frequency', 'duration', 'instructions'] as const).map(field => (
                       <label key={field} className="text-sm capitalize">{field}
                         <Input className="h-12 mt-1" value={med[field]} onChange={e => useRxBuilderStore.getState().updateMedicine(med.id, { [field]: e.target.value })} />
@@ -191,49 +194,39 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
             ))}
           </div>
 
-          {/* Autocomplete Input */}
-          <MedicineAutocomplete />
+          </section>
+
+          <details className="clinic-panel group" open={visitOpen} onToggle={event => setVisitOpen(event.currentTarget.open)}>
+            <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-2 rounded-2xl px-4 sm:px-5">
+              <span className="text-lg font-semibold">Visit measurements <span className="text-sm font-normal text-muted-foreground">· Optional</span></span>
+              <ChevronDown aria-hidden="true" className="size-5 shrink-0 group-open:rotate-180" />
+            </summary>
+            <div className="border-t p-4 sm:p-5"><VisitFields value={visit} onChange={value => { setVisit(value); setVisitError('') }} />
+              {visitError && <p role="alert" className="mt-3 text-red-900">{visitError}</p>}
+            </div>
+          </details>
+
+          <section className="clinic-panel space-y-3 p-4 sm:p-5">
+            <label htmlFor="rx-notes" className="block text-lg font-semibold">Notes and advice</label>
+            <Textarea id="rx-notes" value={notes} onChange={event => setNotes(event.target.value)} placeholder="Instructions or follow-up advice" className="min-h-24" />
+          </section>
+
+          <div className="sticky bottom-0 z-20 space-y-2 rounded-2xl border bg-card p-3 shadow-md">
+            {saveError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-900">{saveError}</p>}
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex min-h-11 items-center gap-2 font-medium">Paper
+                <select className="min-h-11 rounded-lg border border-input bg-card px-2" value={paperSize} onChange={event => setPaperSize(event.target.value === 'A4' ? 'A4' : 'A5')}><option>A5</option><option>A4</option></select>
+              </label>
+              <Button variant="outline" className="flex-1" onClick={() => handleSave(false)} disabled={!canSave}><Save aria-hidden="true" />Save Rx</Button>
+              <Button className="flex-1" onClick={() => handleSave(true)} disabled={!canSave}><Printer aria-hidden="true" />{saving ? 'Saving…' : 'Save and print'}</Button>
+            </div>
+          </div>
         </div>
 
-        {/* Notes */}
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-          <label className="text-sm font-semibold text-gray-700 block mb-2">Notes / Advice</label>
-          <Textarea 
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Any additional advice, diet restrictions, or next visit info..."
-            className="min-h-[120px] resize-none text-base"
-          />
+        <div className="min-w-0">
+          <RxPreview patient={selectedPatient} doctor={doctor} assets={assets} paperSize={paperSize} />
         </div>
-
-        {/* Action Bar */}
-        <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t sticky bottom-0 bg-gray-50/90 backdrop-blur py-4 z-10 md:static md:bg-transparent md:backdrop-blur-none">
-          <Button 
-            variant="outline" 
-            className="flex-1 h-14 text-base" 
-            onClick={() => handleSave(false)}
-            disabled={saving || (!diagnosis && medicines.length === 0)}
-          >
-            <Save className="w-5 h-5 mr-2" />
-            Save Draft
-          </Button>
-          <Button 
-            className="flex-1 h-14 text-base" 
-            onClick={() => handleSave(true)}
-            disabled={saving || (!diagnosis && medicines.length === 0)}
-          >
-            <Printer className="w-5 h-5 mr-2" />
-            Save & Print Rx
-          </Button>
-        </div>
-
       </div>
-
-      {/* RIGHT PANEL: Live Preview */}
-      <div className="hidden md:block">
-        <RxPreview patient={selectedPatient} doctor={doctor} assets={assets} paperSize={paperSize} />
-      </div>
-
     </div>
   )
 }

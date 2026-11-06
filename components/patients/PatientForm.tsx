@@ -88,7 +88,7 @@ export default function PatientForm({ initialData }: PatientFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-4 md:p-6 rounded-lg shadow-sm border">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 clinic-panel p-5 sm:p-7">
       {duplicates.length > 0 && (
         <div role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-4">
           <p className="font-medium">Possible duplicate patient. You can still save.</p>
@@ -96,18 +96,20 @@ export default function PatientForm({ initialData }: PatientFormProps) {
         </div>
       )}
       {duplicateError && <p role="status" className="text-sm text-amber-700">{duplicateError}</p>}
-      {error && <div className="text-red-500 text-sm font-medium">{error}</div>}
+      {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-900">{error}</p>}
 
       <div className="space-y-2">
         <Label htmlFor="name" className="text-base">Full Name *</Label>
         <Input
           id="name"
+          aria-invalid={Boolean(errors.name)}
+          aria-describedby={errors.name ? 'name-error' : undefined}
           placeholder="John Doe"
           className="h-12 text-base"
           disabled={isLoading}
           {...register('name')}
         />
-        {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
+        {errors.name && <p id="name-error" className="text-base text-red-800">{errors.name.message}</p>}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -115,35 +117,39 @@ export default function PatientForm({ initialData }: PatientFormProps) {
           <Label htmlFor="phone" className="text-base">Phone Number</Label>
           <Input
             id="phone"
+          aria-invalid={Boolean(errors.phone)}
+          aria-describedby={errors.phone ? 'phone-error' : undefined}
             type="tel"
             placeholder="+1234567890"
             className="h-12 text-base"
             disabled={isLoading}
             {...register('phone')}
           />
-          {errors.phone && <p className="text-sm text-red-500">{errors.phone.message}</p>}
+          {errors.phone && <p id="phone-error" className="text-base text-red-800">{errors.phone.message}</p>}
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="dob" className="text-base">Date of Birth</Label>
           <Input
             id="dob"
+          aria-invalid={Boolean(errors.dob)}
+          aria-describedby={errors.dob ? 'dob-error' : undefined}
             type="date"
             className="h-12 text-base"
             disabled={isLoading}
             {...register('dob')}
           />
-          {errors.dob && <p className="text-sm text-red-500">{errors.dob.message}</p>}
+          {errors.dob && <p id="dob-error" className="text-base text-red-800">{errors.dob.message}</p>}
         </div>
 
         <div className="space-y-2">
-          <Label className="text-base">Gender</Label>
+          <Label htmlFor="gender" className="text-base">Gender</Label>
           <Select 
             disabled={isLoading} 
             value={gender || undefined} 
             onValueChange={(val) => setValue('gender', val as "MALE" | "FEMALE" | "OTHER")}
           >
-            <SelectTrigger className="h-12 text-base">
+            <SelectTrigger id="gender" className="w-full h-12 text-base">
               <SelectValue placeholder="Select gender" />
             </SelectTrigger>
             <SelectContent>
@@ -152,7 +158,7 @@ export default function PatientForm({ initialData }: PatientFormProps) {
               <SelectItem value="OTHER">Other</SelectItem>
             </SelectContent>
           </Select>
-          {errors.gender && <p className="text-sm text-red-500">{errors.gender.message}</p>}
+          {errors.gender && <p className="text-base text-red-800">{errors.gender.message}</p>}
         </div>
       </div>
 
@@ -160,28 +166,32 @@ export default function PatientForm({ initialData }: PatientFormProps) {
         <Label htmlFor="address" className="text-base">Address</Label>
         <Input
           id="address"
+          aria-invalid={Boolean(errors.address)}
+          aria-describedby={errors.address ? 'address-error' : undefined}
           placeholder="123 Main St..."
           className="h-12 text-base"
           disabled={isLoading}
           {...register('address')}
         />
-        {errors.address && <p className="text-sm text-red-500">{errors.address.message}</p>}
+        {errors.address && <p id="address-error" className="text-base text-red-800">{errors.address.message}</p>}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="allergies" className="text-base">Allergies</Label>
         <Textarea
           id="allergies"
+          aria-invalid={Boolean(errors.allergies)}
+          aria-describedby={errors.allergies ? 'allergies-error' : undefined}
           maxLength={2000}
           placeholder="e.g. Penicillin, Peanuts"
           className="h-12 text-base"
           disabled={isLoading}
           {...register('allergies')}
         />
-        {errors.allergies && <p className="text-sm text-red-500">{errors.allergies.message}</p>}
+        {errors.allergies && <p id="allergies-error" className="text-base text-red-800">{errors.allergies.message}</p>}
       </div>
 
-      <div className="pt-4 flex items-center justify-end gap-4 border-t">
+      <div className="pt-4 flex flex-wrap items-center justify-end gap-3 border-t">
         <Button
           type="button"
           variant="outline"
