@@ -1,7 +1,7 @@
 # Nivaa TASKS (do in order; tick when verified)
 ## Phase 0 - Setup (Luna, low)
 - [x] 0.1 `git init` INSIDE Nivaa root, .gitignore (.env*, node_modules, .next), initial commit. Delete orphan `clinic-app/`. Done when `git status` clean and build passes.
-- [ ] 0.2 Write docs/STATUS.md summarizing repo vs Claude_Context_State.md; list anything that differs.
+- [x] 0.2 Write docs/STATUS.md summarizing repo vs Claude_Context_State.md; list anything that differs.
 ## Phase 1 - Blockers (Sol, medium)
 - [x] 1.1 middleware.ts: protect /patients, /prescriptions, /settings, /templates (all non-login routes). Test: logged-out request to /settings redirects to /login.
 - [x] 1.2 app/page.tsx: redirect to /patients (or /login if no session).

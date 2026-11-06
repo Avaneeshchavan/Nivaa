@@ -12,8 +12,17 @@ BEGIN
   END IF;
 
   UPDATE storage.buckets SET public = false WHERE id = 'prescriptions';
-  ALTER TABLE storage.buckets ENABLE ROW LEVEL SECURITY;
-  ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+  BEGIN
+    ALTER TABLE storage.buckets ENABLE ROW LEVEL SECURITY;
+  EXCEPTION WHEN OTHERS THEN
+    -- In hosted Supabase, storage tables are owned by supabase_storage_admin and already have RLS enabled
+    NULL;
+  END;
+  BEGIN
+    ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
 
   -- Old broad permissive policies must not allow API users to make this public.
   CREATE POLICY nivaa_prescription_bucket_guard ON storage.buckets
