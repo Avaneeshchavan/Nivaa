@@ -1,5 +1,7 @@
 'use server'
 
+import { withSafeActionError } from '@/lib/security/action-error'
+
 import { recordIdSchema } from '@/lib/validations/id.schema'
 
 import { recordAudit } from '@/lib/security/audit'
@@ -9,64 +11,68 @@ import { revalidatePath } from 'next/cache'
 import { parseRxMedicines, prescriptionSchema, type CreatePrescriptionInput, type DuplicateRxDraft } from '@/lib/validations/prescription.schema'
 
 export async function createPrescription(data: CreatePrescriptionInput) {
-  const doctor = await getCurrentDoctor()
-  if (!doctor) throw new Error('Unauthorized')
+  return withSafeActionError('Prescription request unavailable. Try again.', async () => {
+    const doctor = await getCurrentDoctor()
+    if (!doctor) throw new Error('Unauthorized')
 
-  const input = prescriptionSchema.parse(data)
+    const input = prescriptionSchema.parse(data)
 
-  // First verify patient ownership
-  const patient = await prisma.patient.findFirst({
-    where: { id: input.patientId, doctorId: doctor.id }, select: { id: true }
-  })
+    // First verify patient ownership
+    const patient = await prisma.patient.findFirst({
+      where: { id: input.patientId, doctorId: doctor.id }, select: { id: true }
+    })
 
-  if (!patient) throw new Error('Patient not found or unauthorized')
+    if (!patient) throw new Error('Patient not found or unauthorized')
 
-  // The visit and its new Rx are one write: no orphan visit if saving fails.
-  const prescription = await prisma.$transaction(async tx => {
-    const visit = await tx.visit.create({
-      data: {
-        patientId: patient.id,
-        doctorId: doctor.id,
-        diagnosis: input.diagnosis,
-        ...input.visit,
-        prescriptions: {
-          create: {
-            patientId: patient.id,
-            doctorId: doctor.id,
-            diagnosis: input.diagnosis,
-            notes: input.notes,
-            handwriting: input.handwriting,
-            medicines: input.medicines,
+    // The visit and its new Rx are one write: no orphan visit if saving fails.
+    const prescription = await prisma.$transaction(async tx => {
+      const visit = await tx.visit.create({
+        data: {
+          patientId: patient.id,
+          doctorId: doctor.id,
+          diagnosis: input.diagnosis,
+          ...input.visit,
+          prescriptions: {
+            create: {
+              patientId: patient.id,
+              doctorId: doctor.id,
+              diagnosis: input.diagnosis,
+              notes: input.notes,
+              handwriting: input.handwriting,
+              medicines: input.medicines,
+            },
           },
         },
-      },
-      select: { prescriptions: { select: { id: true } } },
+        select: { prescriptions: { select: { id: true } } },
+      })
+      const prescription = visit.prescriptions[0]
+      await recordAudit(doctor.id, 'PRESCRIPTION_CREATE', prescription.id, tx)
+      return prescription
     })
-    const prescription = visit.prescriptions[0]
-    await recordAudit(doctor.id, 'PRESCRIPTION_CREATE', prescription.id, tx)
+
+    revalidatePath(`/patients/${patient.id}`)
+    revalidatePath('/patients')
+
     return prescription
   })
-
-  revalidatePath(`/patients/${patient.id}`)
-  revalidatePath('/patients')
-  
-  return prescription
 }
 
 export async function getPrescriptionForDuplicate(id: string): Promise<DuplicateRxDraft | null> {
-  id = recordIdSchema.parse(id)
-  const doctor = await getCurrentDoctor()
-  if (!doctor) throw new Error('Unauthorized')
-  const source = await prisma.prescription.findFirst({
-    where: { id, doctorId: doctor.id, patient: { doctorId: doctor.id } },
+  return withSafeActionError('Prescription request unavailable. Try again.', async () => {
+    id = recordIdSchema.parse(id)
+    const doctor = await getCurrentDoctor()
+    if (!doctor) throw new Error('Unauthorized')
+    const source = await prisma.prescription.findFirst({
+      where: { id, doctorId: doctor.id, patient: { doctorId: doctor.id } },
+    })
+    if (!source) return null
+    await recordAudit(doctor.id, 'PRESCRIPTION_COPY', source.id)
+    return {
+      sourceId: source.id,
+      patientId: source.patientId,
+      diagnosis: source.diagnosis || '',
+      medicines: parseRxMedicines(source.medicines),
+      notes: source.notes || '',
+    }
   })
-  if (!source) return null
-  await recordAudit(doctor.id, 'PRESCRIPTION_COPY', source.id)
-  return {
-    sourceId: source.id,
-    patientId: source.patientId,
-    diagnosis: source.diagnosis || '',
-    medicines: parseRxMedicines(source.medicines),
-    notes: source.notes || '',
-  }
 }

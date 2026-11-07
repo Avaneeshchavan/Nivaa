@@ -11,8 +11,9 @@ const timings = []
 for (const query of queries) {
   for (let sample = 0; sample < 12; sample++) {
     const start = performance.now()
-    const response = await fetch(new URL(`/api/patients?q=${encodeURIComponent(query)}`, base), {
-      headers: { Cookie: cookie }, redirect: 'manual', signal: AbortSignal.timeout(10000),
+    const response = await fetch(new URL('/api/patients', base), {
+      method: 'POST', body: JSON.stringify({ q: query }),
+      headers: { Cookie: cookie, 'Content-Type': 'application/json' }, redirect: 'manual', signal: AbortSignal.timeout(10000),
     })
     assert.equal(response.status, 200, 'Search must succeed with a doctor session')
     const results = await response.json()

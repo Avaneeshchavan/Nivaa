@@ -85,8 +85,8 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
       setDoctor(updated)
       setProfileMessage({ type: 'success', text: 'Profile updated successfully!' })
       router.refresh()
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Error updating profile'
+    } catch {
+      const errorMsg = 'Error updating profile'
       setProfileMessage({ type: 'error', text: errorMsg })
     } finally {
       setProfileSaving(false)
@@ -134,8 +134,8 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
       setDoctor(updated)
       setProfileMessage({ type: 'success', text: 'Logo uploaded and profile updated!' })
       router.refresh()
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Error uploading logo'
+    } catch {
+      const errorMsg = 'Error uploading logo'
       setProfileMessage({ type: 'error', text: errorMsg })
     } finally {
       setLogoUploading(false)
@@ -150,8 +150,8 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
       const freshTemplates = await getTemplates()
       setTemplates(freshTemplates)
       setProfileMessage({ type: 'success', text: 'Common templates are ready. Review prescribing details before use.' })
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to seed templates'
+    } catch {
+      const errorMsg = 'Failed to seed templates'
       setProfileMessage({ type: 'error', text: errorMsg })
     } finally {
       setSeeding(false)
@@ -222,8 +222,8 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
       await deleteTemplate(id)
       const freshTemplates = await getTemplates()
       setTemplates(freshTemplates)
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Error deleting template'
+    } catch {
+      const errorMsg = 'Error deleting template'
       setProfileMessage({ type: 'error', text: errorMsg })
     }
   }
@@ -302,8 +302,8 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
                     await uploadSignature(data)
                     setProfileMessage({ type: 'success', text: 'Signature saved.' })
                     router.refresh()
-                  } catch (error) {
-                    setProfileMessage({ type: 'error', text: error instanceof Error ? error.message : 'Upload failed' })
+                  } catch {
+                    setProfileMessage({ type: 'error', text: 'Signature upload failed. Choose a PNG/JPEG image under 1 MB and try again.' })
                   } finally {
                     setSignatureUploading(false)
                   }

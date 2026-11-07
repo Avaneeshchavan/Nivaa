@@ -32,8 +32,8 @@ export default function PatientDirectory({ initialPatients }: { initialPatients:
       if (!response.ok) throw new Error('Search failed. Please try again.')
       const data: DirectoryPatient[] = await response.json()
       if (!controller.signal.aborted) setPatients(data)
-    } catch (err) {
-      if (!controller.signal.aborted) setError(err instanceof Error ? err.message : 'Search failed')
+    } catch {
+      if (!controller.signal.aborted) setError('Patient search is unavailable. Please try again.')
     } finally {
       if (!controller.signal.aborted) setLoading(false)
     }

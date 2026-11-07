@@ -81,8 +81,8 @@ export default function PatientForm({ initialData }: PatientFormProps) {
         const newPatient = await createPatient(data)
         router.push(`/patients/${newPatient.id}`)
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+    } catch {
+      setError('Could not save this patient. Check the details and try again.')
       setIsLoading(false)
     }
   }

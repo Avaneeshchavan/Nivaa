@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     // Custom entries must be searchable immediately, including previous misses.
     response.headers.set('Cache-Control', 'private, no-store')
     return response
-  } catch (error) {
+  } catch {
     console.error('Medicine search failed')
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }

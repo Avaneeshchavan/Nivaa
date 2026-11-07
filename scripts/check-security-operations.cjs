@@ -61,8 +61,8 @@ function load(file, result) {
   assert.equal(templates.size, count)
   assert.equal(templates.get(seeded.id).name, 'Renamed by doctor')
   doctor = { id: 'doctor-b' }
-  await assert.rejects(actions.updateTemplate(seeded.id, { name: 'Foreign edit', medicines: [] }), /Not found/)
-  await assert.rejects(actions.deleteTemplate(seeded.id), /Not found/)
+  await assert.rejects(actions.updateTemplate(seeded.id, { name: 'Foreign edit', medicines: [] }), /Template request unavailable/)
+  await assert.rejects(actions.deleteTemplate(seeded.id), /Template request unavailable/)
   await assert.rejects(actions.updateTemplate({ not: '' }, { name: 'Invalid id', medicines: [] }))
   const before = templates.size
   await assert.rejects(actions.createTemplate({ name: 'Invalid', medicines: [{ dosage: 'malformed' }] }))

@@ -3,31 +3,19 @@
 import { useEffect } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useDebouncedCallback } from 'use-debounce'
 
-export default function SearchInput({ onSearch }: { onSearch?: (term: string) => void }) {
+export default function SearchInput({ onSearch }: { onSearch: (term: string) => void }) {
   const searchParams = useSearchParams()
   const pathname = usePathname()
-  const router = useRouter()
 
   useEffect(() => {
     if (searchParams.has('q')) window.history.replaceState(null, '', pathname)
   }, [pathname, searchParams])
 
   const handleSearch = useDebouncedCallback((term: string) => {
-    const params = new URLSearchParams(searchParams)
-    if (term) {
-      params.set('q', term)
-    } else {
-      params.delete('q')
-    }
-    if (onSearch) {
-      onSearch(term)
-      window.history.replaceState(null, '', pathname)
-    } else {
-      router.replace(`${pathname}?${params.toString()}`)
-    }
+    onSearch(term)
   }, 150)
 
   return (
@@ -38,7 +26,6 @@ export default function SearchInput({ onSearch }: { onSearch?: (term: string) =>
         aria-label="Search patient records"
         placeholder="Name, phone, diagnosis or medicine..."
         className="pl-10 h-12 text-base rounded-xl border-input bg-white"
-        defaultValue={searchParams.get('q')?.toString()}
         onChange={(e) => handleSearch(e.target.value)}
       />
     </div>
