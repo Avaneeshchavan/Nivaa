@@ -142,3 +142,8 @@ The existing verified-TLS migration helper is unchanged in N0. Simplifying it is
 N7 work. This migration adds catalog metadata only; it changes no authentication,
 RLS, grants, security policies, patient tables or prescription data. N1 still
 needs a chosen, licensed brand dataset; N0 does not import any brand data.
+
+N0 application record: applied on November 7, 2026. Migration status reports all
+13 tracked migrations applied. Verified live metadata: manufacturer column exists,
+presentation index unique/valid, zero duplicate groups, 202 allopathic and 65
+Ayurvedic rows retained. No patient records were read or changed in these checks.

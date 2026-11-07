@@ -85,7 +85,26 @@ The four reported brand queries still have no seeded brand to find. N0 enables c
 
 ### Release
 
-Production rollout and post-release smoke results will be recorded below when complete.
+Released November 7, 2026 from tracked source commit `c82807c` on
+`v2/audit-fixes`, pushed to the existing `Avaneeshchavan/Nivaa` repository. The six
+application fixes end at `9bc8982`; `c82807c` adds the audit/task/security handoff.
+The subsequent release-record commit changes documentation only.
+
+- Production: https://nivaa-kohl.vercel.app
+- Deployment: `dpl_5kyNTG8jPfftSZrHCjoNsiGhcSav`, READY.
+- Immutable deployment: https://nivaa-4zg4bqv2d-avaneeshchavans-projects.vercel.app
+- Inspector: https://vercel.com/avaneeshchavans-projects/nivaa/5kyNTG8jPfftSZrHCjoNsiGhcSav
+- CLI: Vercel 65.12.1. Existing project/account link and production environment
+  settings were reused. Deployment used a Git archive of committed files, excluded
+  every `.env*` file and copied only the ignored project-link metadata. No local
+  secrets were uploaded and no environment configuration was changed.
+- Vercel inspect confirmed production Ready, the established alias and `bom1`
+  function placement. Remote build completed successfully.
+- Post-release: all 15 public/anonymous smoke checks and eight explicit redirect
+  checks passed on the production alias. Login loaded with the expected security
+  headers; protected routes and POST patient searches required sign-in.
+- The temporary local production server was stopped. Signed-in browser/device
+  acceptance remains pending for the integration limitation recorded above.
 
 ### Reference guidance
 
