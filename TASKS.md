@@ -9,7 +9,7 @@
 - [x] 1.4 Patient history "View Rx": link to /api/prescriptions/[id]/pdf (target _blank); handle visits with no Rx.
 - [x] 1.5 MedicineAutocomplete: allow adding a custom medicine when no match; persist it to Medicine table.
 - [x] 1.6 prisma/seed.ts: 150+ common Indian generic/brand medicines (antibiotics, analgesics, antipyretics, antihypertensives, antidiabetics, antacids, antihistamines, cough/cold, vitamins) with strength+form. Add `prisma db seed` config. List any entry you're unsure of in docs/MED_REVIEW.md for the doctor to verify (do not guess dosages). (Live catalog verified at 267 presentations. Authenticated HTTP checks remain a device step.)
-- [x] 1.7 package.json "postinstall": "prisma generate". Switch from `db push` to tracked migrations (`prisma migrate dev --name init`). (Baseline and twelve migrations applied; see docs/DB_NOTES.md.)
+- [x] 1.7 package.json "postinstall": "prisma generate". Switch from `db push` to tracked migrations (`prisma migrate dev --name init`). (Thirteen tracked migrations, including the baseline, applied; see docs/DB_NOTES.md.)
 - [x] 1.8 Fix StoreInitializer props (clinicName, logoUrl); merge store/ into stores/.
 ## Phase 2 - Doctor-workflow features (Sol, medium)
 - [x] 2.1 Rx history: re-open a past Rx, "Duplicate as new Rx" (big time saver for repeat patients).
@@ -35,3 +35,15 @@
 - [x] Reduce repeated doctor queries, patient/history payloads, blocking PDF initialization and save round trips. Add bounded patient selection, loading feedback and Mumbai function placement.
 - [x] Add a searchable Ayurvedic medicine catalog and system filter. Apply additive migrations and seed the live database idempotently.
 - [x] Add private, editable handwritten prescription notes with drawing, paper-photo attachment, draft support and A4/A5 printing. Verify ownership, concurrency, TypeScript and production build.
+
+## V2 — N0 audit and confirmed defects
+- [x] N0 audit: record all twelve requested areas before code changes in docs/V2_AUDIT.md.
+- [x] N0.1 Reserve measured sticky-action-bar height plus safe area in the scroll container.
+- [x] N0.2 Explain disabled Save controls using shared validation state.
+- [x] N0.3 Default to both systems, optional touch filters and Allopathy/AYUSH result badges.
+- [x] N0.4 Correct custom fields, persist manufacturer/composition, prevent normalized duplicates, and show existing-match feedback. Additive migration applied; 267 catalog rows preserved.
+- [x] N0.5 Remove legacy GET patient searches and URL-producing consumers; redact clinical-data action errors. Ownership regression checks pass.
+- [x] N0.6 Pin compact patient name/age/sex/allergy context in the prescription builder.
+- [ ] N0 device acceptance: rendered checks at 768/820/1024/1180/1366px, Safari keyboard/touch/focus and signed-in flows. Browser integration unavailable; see BLOCKERS.md. Automated checks and source inspection are complete.
+
+N1–N7 have not been started. The next prompt requires the user's instruction.

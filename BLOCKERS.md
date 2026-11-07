@@ -11,3 +11,13 @@ The backup script and encryption/tamper checks are implemented. This machine has
 ## Browser and device verification
 
 The browser integration lists the signed-in Nivaa tab but attaching fails with `browser.user is unavailable`. Native access to the Codex app is explicitly denied. TypeScript, production builds and synthetic service/SQL tests remain available. Signed-in visual checks, iPad virtual-keyboard behavior, physical Pencil input and authenticated latency measurement remain pending device verification.
+
+## V2 N0 rendered acceptance — November 7
+
+N0's six fixes, TypeScript/build, 16 regression suites and local HTTP checks are
+complete. Reattempting the existing signed-in tab and the documented alternative
+browser binding both failed with `browser.user is unavailable`. No rendered
+viewport checks or screenshots could be obtained. The 768/820/1024/1180/1366px
+review in docs/V2_AUDIT.md is explicitly source arithmetic, not browser evidence.
+Safari virtual-keyboard/focus, real touch/Pencil and signed-in HTTP timing remain
+unverified. No auth bypass or substitute browser-control mechanism was used.

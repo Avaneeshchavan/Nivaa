@@ -54,4 +54,40 @@ Each numbered fix gets its own commit and appropriate regression checks. Catalog
 
 ## Results
 
-Pending implementation. Baseline findings above remain frozen to the pre-fix commit. Final verification, commits, migrations and any limits will be recorded here before the N0 handoff.
+All six N0 fixes are implemented. Baseline findings above remain frozen to the pre-fix commit; the table below describes the resulting code. No N1–N7 implementation was started.
+
+| Fix | Commit | Result / current evidence |
+| --- | --- | --- |
+| 1. Action-bar overlap | `68899f3` | `RxBuilder.tsx:43`, `:240`, `lib/prescriptions/scroll-reservation.ts:2`, `app/globals.css` measure the rendered bar with ResizeObserver and reserve its actual height plus the bottom safe area in the dashboard scroll container. Reservation and scroll padding follow wrapped controls/errors and restore previous styles on unmount. |
+| 2. Disabled-save reason | `5dedb8d` | `lib/prescriptions/save-state.ts:13`, `RxBuilder.tsx:91`, `:242` derive an inline status from patient selection, content, busy flags and the same visit/prescription schemas used by save. Both buttons reference the explanation. Diagnosis/advice/handwriting-only saves remain supported. |
+| 3. Medicine systems | `30f5d82` | `MedicineAutocomplete.tsx:104` starts with All medicines and offers optional 44px Allopathy/AYUSH chips. Search results show system badges. Internal AYURVEDIC values remain compatible. |
+| 4. Custom medicine | `afd7112` | `CustomMedicineForm.tsx:10`, `actions/medicines.actions.ts:9`, `lib/validations/custom-medicine.schema.ts:7`. Ordered, labeled name/form/strength/company/composition fields are outside the command list and do not nest a form inside the template editor. Save is the final action. Server validation normalizes display spacing and bounds the combined name/strength to 240 characters. A database expression index prevents case/spacing/hyphen/Unicode variants, including legacy IDs and concurrent requests. Existing matches return unchanged with “Already exists: <name>”. Different strengths/forms remain distinct. Manufacturer is persisted; generic uses the existing field. Search responses use private no-store so previous misses do not hide new records. |
+| 5. Search privacy and error redaction | `3ee6d1e` | The two patient search routes export POST only. `SearchInput.tsx:9` requires its search callback; the Patients page ignores q; the benchmark sends POST JSON. Existing directory/global/picker/duplicate consumers all use POST. `lib/security/action-error.ts:10` wraps 20 clinical-data action boundaries, preserving only fixed business messages and dropping original exceptions/causes. Prisma logging is explicitly disabled with minimal error formatting. Patient/settings feedback is fixed text. No auth logic, middleware, RLS or security migrations changed. |
+| 6. Pinned patient context | `9bc8982` | `RxBuilder.tsx:152`, `PatientStrip.tsx:9`, `lib/prescriptions/patient-age.ts:2`. A full-width sticky strip shows name, age/sex and allergy status. Unknown allergies say “Allergies not recorded”. Long text wraps/clamps with a 44px Read allergies dialog. The measured strip height also sets focus-scroll top padding. Age follows the clinic's India calendar day. |
+
+### Verification performed
+
+- `npx tsc --noEmit`: passed after the final production build.
+- `npm run build`: passed, including Next's lint/type checks, with no warnings on the final run.
+- Six new regression suites passed: `check-rx-scroll.cjs`, `check-rx-save.cjs`, `check-medicine-picker.cjs`, `check-custom-medicine.cjs`, `check-search-privacy.cjs`, `check-patient-strip.cjs`.
+- Ten existing suites passed: doctor access, query budget, workflow notes, drafts, PDF security, database isolation, private prescription storage, composed Storage policies, security operations and backup encryption. The template ownership test now expects a redacted error while retaining its cross-doctor rejection assertions.
+- The custom-medicine suite runs the real migration and action SQL against a local PostgreSQL-compatible engine with all 267 seed presentations, legacy generated IDs, normalized variants, concurrent inserts, invalid input, metadata preservation and transactional rollback on existing collisions. It creates no remote test medicines.
+- The privacy suite injects synthetic private values into database/SDK failures across 20 actual data-action exports, checks safe messages/stacks/no original cause/no console output, validates POST route bodies and checks anonymous denial. Route modules have no GET export; Next supplies method-not-allowed after middleware admits an authenticated request. Anonymous HTTP requests continue to redirect to login. A signed-in HTTP 405 check was not performed.
+- Local production HTTP: all 15 smoke checks plus eight explicit anonymous redirect checks passed. These verify login/security headers/protection, not signed-in prescribing.
+- Hosted migration `202611070005_custom_medicine_identity` applied successfully over verified TLS using the unchanged migration helper. All 13 tracked migrations are applied. Live metadata confirms manufacturer present, the unique index valid and zero normalized duplicate groups. Catalog counts remain 202 ALLOPATHY / 65 AYURVEDIC. No patient records were read for these N0 database checks; no patient data or .env files were changed.
+- No dependencies were added or changed. `git diff --check` passed.
+
+### Verification limits and remaining work
+
+The browser integration again failed to attach the existing Nivaa tab with `browser.user is unavailable`. The documented alternative using the existing browser binding failed the same way. No screenshots or rendered geometry were obtained. The five width checks above are source/breakpoint calculations only. Actual Safari/iPad scrolling, focus/virtual-keyboard behavior, sticky element rectangles at 768/820/1024/1180/1366px, touch interaction and screen-reader acceptance remain device checks. Component tests cover ordered controls, 44px classes, state transitions, accessibility labels, long allergy text and dynamic measurements, but do not establish rendered-device behavior. See BLOCKERS.md.
+
+The four reported brand queries still have no seeded brand to find. N0 enables corrected manual custom entry; catalog import, composition/company search, typo tolerance and doctor usage learning are N1. Offline drafts, template search/favorites, printing upgrades and other V2 features remain deferred. The full backup/restore drill, runtime least-privilege role, dependency triage, provider plan/logging decisions and authenticated latency measurements remain open. Do not interpret a passing encryption test as a completed clinic restore.
+
+### Release
+
+Production rollout and post-release smoke results will be recorded below when complete.
+
+### Reference guidance
+
+- [Next.js 15 route handlers](https://nextjs.org/docs/15/app/api-reference/file-conventions/route): supported methods and automatic method-not-allowed behavior.
+- [PostgreSQL string normalization](https://www.postgresql.org/docs/current/functions-string.html) and [INSERT conflict handling](https://www.postgresql.org/docs/current/sql-insert.html): catalog normalization/index and atomic duplicate handling. The actual SQL was tested locally and applied on the hosted server.

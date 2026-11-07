@@ -1,5 +1,15 @@
 # Nivaa implementation and review handoff
 
+> **V2 N0 update:** Only N0 from NIVAA_V2_PROMPTS.md has now been implemented on
+> `v2/audit-fixes`. Read [docs/V2_AUDIT.md](docs/V2_AUDIT.md) first for the frozen
+> pre-change audit, six separate fix commits, migration/test evidence and limits.
+> The custom form now stores manufacturer/generic and prevents presentation
+> duplicates. Legacy GET searches are retired; clinical-action errors are redacted;
+> the builder has measured sticky reservations, Save explanations and pinned patient
+> context. N1 brand importing/ranking and all later prompts remain unstarted.
+> Browser/device acceptance and the full backup/restore drill remain open.
+
+
 Prepared November 7, 2026 for an independent Claude critique of UI, workflows, architecture and security. This file contains implementation details and verification evidence, with remaining gaps explicitly identified. It contains no live patient records or credentials.
 
 ## Project and review scope
