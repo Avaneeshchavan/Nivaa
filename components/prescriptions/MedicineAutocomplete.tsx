@@ -11,13 +11,13 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import { useRxBuilderStore } from '@/stores/rxBuilderStore'
+import { useRxBuilderStore, type RxMedicine } from '@/stores/rxBuilderStore'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { createCustomMedicine } from '@/actions/medicines.actions'
 import type { Medicine } from '@/lib/generated/prisma/client'
 
-export default function MedicineAutocomplete() {
+export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxMedicine) => void } = {}) {
   const [system, setSystem] = useState<'ALL' | 'ALLOPATHY' | 'AYURVEDIC'>('ALL')
   const [search, setSearch] = useState('')
   const [medicines, setMedicines] = useState<Medicine[]>([])
@@ -91,7 +91,8 @@ export default function MedicineAutocomplete() {
   const handleAdd = () => {
     if (!selectedMed || !dosage.trim() || !frequency.trim() || !duration.trim()) return
 
-    addMedicine({
+    const commitMedicine = onAdd || addMedicine
+    commitMedicine({
       id: crypto.randomUUID(), // Temp ID for builder
       name: selectedMed.name,
       generic: selectedMed.generic,
@@ -240,7 +241,7 @@ export default function MedicineAutocomplete() {
             </div>
           </div>
 
-          <Button onClick={handleAdd} className="w-full h-12 gap-2" disabled={!dosage.trim() || !frequency.trim() || !duration.trim()}>
+          <Button type="button" onClick={handleAdd} className="w-full h-12 gap-2" disabled={!dosage.trim() || !frequency.trim() || !duration.trim()}>
             <Plus className="w-4 h-4" /> Add to Prescription
           </Button>
         </div>

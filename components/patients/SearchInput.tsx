@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
@@ -10,6 +11,10 @@ export default function SearchInput({ onSearch }: { onSearch?: (term: string) =>
   const pathname = usePathname()
   const router = useRouter()
 
+  useEffect(() => {
+    if (searchParams.has('q')) window.history.replaceState(null, '', pathname)
+  }, [pathname, searchParams])
+
   const handleSearch = useDebouncedCallback((term: string) => {
     const params = new URLSearchParams(searchParams)
     if (term) {
@@ -19,7 +24,7 @@ export default function SearchInput({ onSearch }: { onSearch?: (term: string) =>
     }
     if (onSearch) {
       onSearch(term)
-      window.history.replaceState(null, '', `${pathname}?${params.toString()}`)
+      window.history.replaceState(null, '', pathname)
     } else {
       router.replace(`${pathname}?${params.toString()}`)
     }

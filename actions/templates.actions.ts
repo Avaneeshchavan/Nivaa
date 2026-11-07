@@ -1,111 +1,80 @@
 'use server'
 
+import { recordIdSchema } from '@/lib/validations/id.schema'
+
+import { createHash } from 'node:crypto'
 import prisma from '@/lib/prisma'
 import { getCurrentDoctor } from './auth.actions'
+import { recordAudit } from '@/lib/security/audit'
 import { revalidatePath } from 'next/cache'
 import { defaultTemplates } from '@/lib/templates/defaultTemplates'
+import { templateSchema, type TemplateInput } from '@/lib/validations/template.schema'
+
+function refreshTemplates() {
+  revalidatePath('/settings')
+  revalidatePath('/templates')
+  revalidatePath('/prescriptions/new')
+}
 
 export async function getTemplates() {
   const doctor = await getCurrentDoctor()
   if (!doctor) throw new Error('Unauthorized')
-
-  return await prisma.diseaseTemplate.findMany({
-    where: { doctorId: doctor.id },
-    orderBy: { createdAt: 'desc' }
-  })
+  return prisma.diseaseTemplate.findMany({ where: { doctorId: doctor.id }, orderBy: { createdAt: 'desc' } })
 }
 
-export async function createTemplate(data: {
-  name: string
-  diagnosis?: string
-  medicines: any
-}) {
+export async function createTemplate(data: TemplateInput) {
   const doctor = await getCurrentDoctor()
   if (!doctor) throw new Error('Unauthorized')
-
-  const newTemplate = await prisma.diseaseTemplate.create({
-    data: {
-      name: data.name,
-      diagnosis: data.diagnosis || null,
-      medicines: data.medicines || [],
-      doctorId: doctor.id
-    }
+  const input = templateSchema.parse(data)
+  const result = await prisma.$transaction(async tx => {
+    const template = await tx.diseaseTemplate.create({ data: { ...input, doctorId: doctor.id } })
+    await recordAudit(doctor.id, 'TEMPLATE_CREATE', template.id, tx)
+    return template
   })
-
-  revalidatePath('/settings')
-  return newTemplate
+  refreshTemplates()
+  return result
 }
 
-export async function updateTemplate(
-  id: string,
-  data: {
-    name: string
-    diagnosis?: string
-    medicines: any
-  }
-) {
+export async function updateTemplate(id: string, data: TemplateInput) {
+  id = recordIdSchema.parse(id)
   const doctor = await getCurrentDoctor()
   if (!doctor) throw new Error('Unauthorized')
-
-  // Verify ownership
-  const existing = await prisma.diseaseTemplate.findFirst({
-    where: { id, doctorId: doctor.id }
+  const input = templateSchema.parse(data)
+  const result = await prisma.$transaction(async tx => {
+    const template = await tx.diseaseTemplate.update({ where: { id, doctorId: doctor.id }, data: input })
+    await recordAudit(doctor.id, 'TEMPLATE_UPDATE', template.id, tx)
+    return template
   })
-  if (!existing) throw new Error('Template not found or unauthorized')
-
-  const updated = await prisma.diseaseTemplate.update({
-    where: { id },
-    data: {
-      name: data.name,
-      diagnosis: data.diagnosis || null,
-      medicines: data.medicines || []
-    }
-  })
-
-  revalidatePath('/settings')
-  return updated
+  refreshTemplates()
+  return result
 }
 
 export async function deleteTemplate(id: string) {
+  id = recordIdSchema.parse(id)
   const doctor = await getCurrentDoctor()
   if (!doctor) throw new Error('Unauthorized')
-
-  // Verify ownership
-  const existing = await prisma.diseaseTemplate.findFirst({
-    where: { id, doctorId: doctor.id }
+  await prisma.$transaction(async tx => {
+    await tx.diseaseTemplate.delete({ where: { id, doctorId: doctor.id } })
+    await recordAudit(doctor.id, 'TEMPLATE_DELETE', id, tx)
   })
-  if (!existing) throw new Error('Template not found or unauthorized')
-
-  await prisma.diseaseTemplate.delete({
-    where: { id }
-  })
-
-  revalidatePath('/settings')
+  refreshTemplates()
   return { success: true }
 }
 
 export async function seedDefaultTemplates() {
   const doctor = await getCurrentDoctor()
   if (!doctor) throw new Error('Unauthorized')
-
-  const count = await prisma.diseaseTemplate.count({
-    where: { doctorId: doctor.id }
+  await prisma.$transaction(async tx => {
+    // Serializes repeat clicks and concurrent requests for this doctor only.
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${doctor.id}, 0))::text`
+    const existing = await tx.diseaseTemplate.findMany({ where: { doctorId: doctor.id }, select: { id: true, name: true } })
+    const names = new Set(existing.map(template => template.name.trim().toLowerCase()))
+    for (const template of defaultTemplates) {
+      const id = `default_${createHash('sha256').update(`${doctor.id}\0${template.name}`).digest('hex')}`
+      if (names.has(template.name.trim().toLowerCase()) || existing.some(item => item.id === id)) continue
+      await tx.diseaseTemplate.create({ data: { id, doctorId: doctor.id, ...templateSchema.parse(template) } })
+    }
+    await recordAudit(doctor.id, 'TEMPLATE_SEED', null, tx)
   })
-
-  // We seed the default templates
-  const created = []
-  for (const template of defaultTemplates) {
-    const newT = await prisma.diseaseTemplate.create({
-      data: {
-        name: template.name,
-        diagnosis: template.diagnosis,
-        medicines: template.medicines as any,
-        doctorId: doctor.id
-      }
-    })
-    created.push(newT)
-  }
-
-  revalidatePath('/settings')
-  return created
+  refreshTemplates()
 }

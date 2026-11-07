@@ -5,8 +5,11 @@ const vm = require('node:vm')
 const ts = require('typescript')
 const access = require('../lib/auth/doctor-access.ts')
 const old = process.env.ALLOWED_DOCTOR_EMAILS
-let user, doctor, authCalls = 0, dbCalls = 0, signouts = 0, passwordError = null
+let user, doctor, authCalls = 0, dbCalls = 0, signouts = 0, passwordError = null, auditFailure = false
 const mocks = {
+  '@/lib/security/audit': { recordAudit: async () => { if (auditFailure) throw new Error('audit unavailable') } },
+  '@/lib/security/rate-limit': { consumeRateLimit: async () => true },
+  '@/lib/validations/profile.schema': require('../lib/validations/profile.schema.ts'),
   '@/lib/auth/doctor-access': access,
   '@/lib/supabase/server': { createClient: async () => ({ auth: {
     getUser: async () => ({ data: { user }, error: null }),
@@ -29,11 +32,11 @@ vm.runInNewContext(ts.transpileModule(fs.readFileSync('actions/auth.actions.ts',
   assert.equal(access.isAllowedDoctorEmail('b@example.invalid'), true)
   assert.equal(access.isAllowedDoctorEmail('a+alias@example.invalid'), false)
   user = { id: 'a', email: 'a@example.invalid', email_confirmed_at: 'fixture' }
-  doctor = { id: 'doctor-a', email: 'A@example.invalid', supabaseId: 'a' }
+  doctor = { active: true, id: 'doctor-a', email: 'A@example.invalid', supabaseId: 'a' }
   assert.equal((await exported.getCurrentDoctor()).id, 'doctor-a')
   assert.equal((await exported.signIn({email:'a@example.invalid',password:'fixture-password'})).error, null)
   user = { id: 'b', email: 'b@example.invalid', email_confirmed_at: 'fixture' }
-  doctor = { id: 'doctor-b', email: 'b@example.invalid', supabaseId: 'b' }
+  doctor = { active: true, id: 'doctor-b', email: 'b@example.invalid', supabaseId: 'b' }
   assert.equal((await exported.getCurrentDoctor()).id, 'doctor-b')
   doctor = { ...doctor, email: 'other@example.invalid' }
   assert.equal(await exported.getCurrentDoctor(), null)
@@ -73,6 +76,14 @@ vm.runInNewContext(ts.transpileModule(fs.readFileSync('actions/auth.actions.ts',
   user = {email:'a@example.invalid',email_confirmed_at:'fixture'}
   assert.equal((await middlewareExports.middleware(request())).status, 307)
   assert.equal((await middlewareExports.middleware(new next.NextRequest('https://fixture.invalid/login'))).status, 200)
+  process.env.ALLOWED_DOCTOR_EMAILS = 'a@example.invalid,b@example.invalid'
+  user = { id: 'a', email: 'a@example.invalid', email_confirmed_at: 'fixture' }
+  doctor = { active: true, id: 'doctor-a', supabaseId: 'a', email: 'a@example.invalid' }
+  passwordError = null
+  auditFailure = true
+  const previousSignouts = signouts
+  assert.ok((await exported.signIn({ email: 'a@example.invalid', password: 'fixture-password' })).error)
+  assert.equal(signouts, previousSignouts + 1)
   console.log('PASS: exactly two identities, malformed config denied, confirmed email and Doctor mapping required, generic login errors and session cleanup')
 })().catch(error => { console.error(error); process.exitCode = 1 }).finally(() => {
   if (old === undefined) delete process.env.ALLOWED_DOCTOR_EMAILS

@@ -1,0 +1,13 @@
+# Remaining verification and operations gaps
+
+## Resolved migration-client certificate issue
+
+The runtime driver connects successfully with verified TLS 1.3 and the official Supabase CA. Three Prisma migration-status checks using strict TLS failed with `P1011: The certificate was not trusted` or `Schema engine error` despite the same public CA. Tried the CA URL argument, native trust environment, and Node extra CA configuration. Resolved with `scripts/migrate-verified.mjs`. It exposes a temporary loopback listener to the native CLI and verifies the external server certificate and hostname before forwarding any startup/authentication data. Runtime and seed connections verify TLS directly. No database reset or external TLS verification bypass was used.
+
+## Full backup and restore drill
+
+The backup script and encryption/tamper checks are implemented. This machine has no `pg_dump` or `pg_restore` on PATH. A full backup also needs a locally supplied `SUPABASE_SERVICE_ROLE_KEY` to export private Storage objects, an owner-held `NIVAA_BACKUP_PASSPHRASE`, and an isolated restore destination. Those inputs are not available in the configured five application variables. No full clinic backup or live-data restore drill has been claimed.
+
+## Browser and device verification
+
+The browser integration lists the signed-in Nivaa tab but attaching fails with `browser.user is unavailable`. Native access to the Codex app is explicitly denied. TypeScript, production builds and synthetic service/SQL tests remain available. Signed-in visual checks, iPad virtual-keyboard behavior, physical Pencil input and authenticated latency measurement remain pending device verification.

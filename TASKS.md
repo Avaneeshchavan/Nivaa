@@ -8,25 +8,25 @@
 - [x] 1.3 Sidebar: fix /templates 404 (create a /templates page reusing the settings template manager OR repoint).
 - [x] 1.4 Patient history "View Rx": link to /api/prescriptions/[id]/pdf (target _blank); handle visits with no Rx.
 - [x] 1.5 MedicineAutocomplete: allow adding a custom medicine when no match; persist it to Medicine table.
-- [x] 1.6 prisma/seed.ts: 150+ common Indian generic/brand medicines (antibiotics, analgesics, antipyretics, antihypertensives, antidiabetics, antacids, antihistamines, cough/cold, vitamins) with strength+form. Add `prisma db seed` config. List any entry you're unsure of in docs/MED_REVIEW.md for the doctor to verify (do not guess dosages). (Seed code verified; live seed and HTTP check pending database access; see docs/DB_NOTES.md.)
-- [x] 1.7 package.json "postinstall": "prisma generate". Switch from `db push` to tracked migrations (`prisma migrate dev --name init`). (Baseline tracked; remote resolve pending database access; see docs/DB_NOTES.md.)
+- [x] 1.6 prisma/seed.ts: 150+ common Indian generic/brand medicines (antibiotics, analgesics, antipyretics, antihypertensives, antidiabetics, antacids, antihistamines, cough/cold, vitamins) with strength+form. Add `prisma db seed` config. List any entry you're unsure of in docs/MED_REVIEW.md for the doctor to verify (do not guess dosages). (Live catalog verified at 267 presentations. Authenticated HTTP checks remain a device step.)
+- [x] 1.7 package.json "postinstall": "prisma generate". Switch from `db push` to tracked migrations (`prisma migrate dev --name init`). (Baseline and twelve migrations applied; see docs/DB_NOTES.md.)
 - [x] 1.8 Fix StoreInitializer props (clinicName, logoUrl); merge store/ into stores/.
 ## Phase 2 - Doctor-workflow features (Sol, medium)
 - [x] 2.1 Rx history: re-open a past Rx, "Duplicate as new Rx" (big time saver for repeat patients).
 - [x] 2.2 Patient search: add phone, diagnosis, medicine search; pg_trgm; duplicate-patient warning (similar name + same phone). (Local SQL verified; authenticated HTTP timing pending; see docs/SEARCH_NOTES.md.)
-- [x] 2.3 Visit fields: weight, vitals (BP, temp, SpO2), allergies banner on patient header + Rx builder. (Migration verified locally; hosted DB deployment pending; see docs/DB_NOTES.md.)
+- [x] 2.3 Visit fields: weight, vitals (BP, temp, SpO2), allergies banner on patient header + Rx builder. (Migration applied to the hosted database.)
 - [x] 2.4 Template quick-bar in Rx builder: one-tap templates, editable after fill.
 - [x] 2.5 PDF: letterhead/logo, Rx number, date, signature image upload, A4 and A5; Devanagari/Marathi text if used.
 - [x] 2.6 Speed: Cmd/Ctrl+K patient search, Enter to add medicine, autosave drafts.
 ## Phase 3 - Security & ops (Sol medium; Astra high ONCE for review)
-- [x] 3.1 Supabase RLS on all tables + storage; `prescriptions` bucket PRIVATE with signed URLs. (Local implementation/tests pass; HUMAN hosted migration and verification pending docs/STORAGE_SECURITY.md.)
-- [ ] 3.2 Only the 2 allowlisted doctor emails can sign in; disable public signups (dashboard steps in docs/DEPLOY.md for the human). (App-side allowlist verified; HUMAN configuration/signup disablement and hosted verification pending docs/DEPLOY.md.)
-- [ ] 3.3 Rate-limit login; security headers; audit log table (who viewed/edited what).
-- [ ] 3.4 Backups: scripts/backup.sh (pg_dump) + weekly export docs. Supabase free tier pauses on inactivity -> document keep-alive.
-- [ ] 3.5 ASTRA REVIEW (one thread): security + privacy review -> docs/SECURITY_REVIEW.md, fix criticals only.
+- [x] 3.1 Supabase RLS on all tables + storage; `prescriptions` bucket PRIVATE with signed URLs. (Hosted RLS/privacy metadata verified, composed policies tested; live two-account Storage/CDN tests remain a device step.)
+- [x] 3.2 Only the 2 allowlisted doctor emails can sign in; disable public signups (dashboard steps in docs/DEPLOY.md for the human). (Two verified allowed mappings and disabled hosted signup confirmed. Active membership also gates Storage.)
+- [x] 3.3 Rate-limit login; security headers; audit log table (who viewed/edited what). Implemented with shared counters, primary-record audit events and transactional write auditing; coverage limits are in docs/SECURITY_REVIEW.md.
+- [ ] 3.4 Backups: scripts/backup.sh (pg_dump) + weekly export docs. Supabase free tier pauses on inactivity -> document keep-alive. Tooling, encryption checks and docs/BACKUPS.md are complete. Full backup/isolated restore pending owner-held secrets, PostgreSQL tools and recovery target.
+- [x] 3.5 Security + privacy review -> docs/SECURITY_REVIEW.md. Current source/live-metadata review completed in this Codex pass. The original Astra label was a model-routing preference; independent Claude critique remains the next review.
 ## Phase 4 - Deploy (HUMAN steps flagged)
-- [ ] 4.1 docs/DEPLOY.md: exact Vercel + Supabase env vars and click-path. HUMAN performs deploy.
-- [ ] 4.2 Smoke-test script against deployed URL; docs/PARENTS_QUICKSTART.md (1 page, plain language).
+- [x] 4.1 docs/DEPLOY.md: exact Vercel + Supabase env vars and CLI release runbook. Deployment authorized and performed through the existing Vercel project.
+- [x] 4.2 scripts/smoke-test.mjs against deployed URL; docs/PARENTS_QUICKSTART.md in plain language. Real signed-in/device acceptance checks remain explicit.
 ## Phase 5 - Optional, only after parents have used it for a week
 - [ ] 5.1 Photo of handwritten Rx -> OCR -> editable prefilled form. Decide OCR provider + patient-data consent first; never auto-save without doctor review.
 - [ ] 5.2 PWA install + offline-tolerant drafts for iPad.

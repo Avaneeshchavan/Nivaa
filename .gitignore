@@ -40,3 +40,6 @@ next-env.d.ts
 
 # prisma generated client
 lib/generated/
+
+# encrypted clinic backups
+/backups/

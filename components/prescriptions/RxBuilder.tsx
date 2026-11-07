@@ -147,6 +147,8 @@ export default function RxBuilder({ allowPatientChange, initialPatientId, patien
             </div>
             {allowPatientChange && <PatientPicker onSelect={patient => {
               if (handwritingBusy || saving) return
+              const hasEntries = diagnosis.trim() || medicines.length || notes.trim() || handwriting.strokes.length || handwriting.photoId || Object.values(visit).some(value => value.trim())
+              if (patientId && patient.id !== patientId && hasEntries && !window.confirm('Change patient? The current prescription entries will be cleared.')) return
               setPickedPatient(patient)
               setPatientId(patient.id)
             }} />}

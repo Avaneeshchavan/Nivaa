@@ -1,3 +1,5 @@
+> Historical November 2 snapshot. Current source, hosted evidence and open conditions are in `docs/STATUS.md`, `docs/PLAN_AUDIT.md` and `CLAUDE_HANDOFF.md`. The original snapshot below is preserved for comparison.
+
 # CLAUDE_CONTEXT_STATE.md
 **Project:** Nivaa Clinic Prescription Application (iPad-First EHR/Prescription Builder)  
 **Last Updated:** 2026-11-02  

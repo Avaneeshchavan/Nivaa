@@ -105,3 +105,7 @@ Verification on local embedded PostgreSQL confirmed old visit values remain NULL
 Applied `202611070001_workflow_notes` and `202611070002_handwriting_storage` to the existing database with `npx prisma migrate deploy`. They add medicine system classification, prescription handwriting JSON, visit/prescription history indexes, medicine-search indexes, and the private `prescription-notes` image bucket with owner-scoped restrictive policies. The changes are additive.
 
 The Ayurvedic-only seed ran twice. The database contains 202 allopathic and 65 Ayurvedic presentations. Future deployments must apply tracked migrations before releasing code that reads the new fields. The existing RLS settings continue to cover the added application-table columns. Include the new private bucket in storage backups.
+
+## November 7 security operations
+
+Applied `202611070003_security_operations` and `202611070004_storage_membership` over the verified migration bridge. They add server-only RateLimit and append-only AuditLog tables, Doctor.active, and restrictive Storage membership checks. Twelve migrations are now applied. Runtime/seed PostgreSQL connections require verified TLS using the tracked public Supabase CA. Use `node scripts/migrate-verified.mjs status` or `deploy` on this machine because the native migration client's direct CA verification failed. See DEPLOY.md and BACKUPS.md.

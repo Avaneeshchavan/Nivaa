@@ -1,6 +1,9 @@
 'use server'
 
+import { recordIdSchema } from '@/lib/validations/id.schema'
+
 import { prescriptionPatientSelect } from '@/lib/prescription-patient'
+import { recordAudit } from '@/lib/security/audit'
 import prisma from '@/lib/prisma'
 import { getCurrentDoctor } from './auth.actions'
 import { patientSchema, type PatientFormData } from '@/lib/validations/patient.schema'
@@ -31,7 +34,7 @@ export async function getPatients(search?: string) {
     orderBy: { updatedAt: 'desc' },
     select: {
       id: true, name: true, phone: true,
-      visits: { orderBy: { date: 'desc' }, take: 1, select: { date: true } },
+      visits: { where: { doctorId: doctor.id }, orderBy: { date: 'desc' }, take: 1, select: { date: true } },
     },
   })
 
@@ -39,6 +42,7 @@ export async function getPatients(search?: string) {
 }
 
 export async function getPatient(id: string) {
+  id = recordIdSchema.parse(id)
   const doctor = await getCurrentDoctor()
   if (!doctor) throw new Error('Unauthorized')
 
@@ -49,13 +53,15 @@ export async function getPatient(id: string) {
     },
     include: {
       visits: {
+        where: { doctorId: doctor.id },
         orderBy: { date: 'desc' },
-        include: { prescriptions: { select: { id: true, createdAt: true } } },
+        include: { prescriptions: { where: { doctorId: doctor.id, patientId: id }, select: { id: true, createdAt: true } } },
       },
     },
   })
 
   if (!patient) throw new Error('Patient not found')
+  await recordAudit(doctor.id, 'PATIENT_VIEW', patient.id)
   return patient
 }
 
@@ -64,13 +70,17 @@ export async function createPatient(data: PatientFormData) {
   const doctor = await getCurrentDoctor()
   if (!doctor) throw new Error('Unauthorized')
 
-  const newPatient = await prisma.patient.create({
-    data: {
-      ...data,
-      dob: data.dob ? new Date(data.dob) : null,
-      doctorId: doctor.id,
-    },
-    select: { id: true },
+  const newPatient = await prisma.$transaction(async tx => {
+    const patient = await tx.patient.create({
+      data: {
+        ...data,
+        dob: data.dob ? new Date(data.dob) : null,
+        doctorId: doctor.id,
+      },
+      select: { id: true },
+    })
+    await recordAudit(doctor.id, 'PATIENT_CREATE', patient.id, tx)
+    return patient
   })
 
   revalidatePath('/patients')
@@ -78,16 +88,21 @@ export async function createPatient(data: PatientFormData) {
 }
 
 export async function updatePatient(id: string, data: PatientFormData) {
+  id = recordIdSchema.parse(id)
   data = patientSchema.parse(data)
   const doctor = await getCurrentDoctor()
   if (!doctor) throw new Error('Unauthorized')
 
-  const updatedPatient = await prisma.patient.update({
-    where: { id, doctorId: doctor.id },
-    data: {
-      ...data,
-      dob: data.dob ? new Date(data.dob) : null,
-    },
+  const updatedPatient = await prisma.$transaction(async tx => {
+    const patient = await tx.patient.update({
+      where: { id, doctorId: doctor.id },
+      data: {
+        ...data,
+        dob: data.dob ? new Date(data.dob) : null,
+      },
+    })
+    await recordAudit(doctor.id, 'PATIENT_UPDATE', patient.id, tx)
+    return patient
   })
 
   revalidatePath('/patients')
@@ -124,9 +139,11 @@ export async function getPrescriptionPatients(search?: string) {
 }
 
 export async function getPatientForEdit(id: string) {
+  id = recordIdSchema.parse(id)
   const doctor = await getCurrentDoctor()
   if (!doctor) throw new Error('Unauthorized')
   const patient = await prisma.patient.findFirst({ where: { id, doctorId: doctor.id } })
   if (!patient) throw new Error('Patient not found')
+  await recordAudit(doctor.id, 'PATIENT_VIEW', patient.id)
   return patient
 }

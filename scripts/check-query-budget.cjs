@@ -7,7 +7,7 @@ const access = require('../lib/auth/doctor-access.ts')
 const patientSchema = require('../lib/validations/patient.schema.ts')
 let requestMemo = new Map(), authCalls = 0, doctorCalls = 0, patientCalls = 0, query
 let user = { id: 'auth-a', email: 'a@example.invalid', email_confirmed_at: 'fixture' }
-let doctor = { id: 'doctor-a', supabaseId: 'auth-a', email: 'a@example.invalid' }
+let doctor = { active: true, id: 'doctor-a', supabaseId: 'auth-a', email: 'a@example.invalid' }
 const old = process.env.ALLOWED_DOCTOR_EMAILS
 const prisma = {
   doctor: { findUnique: async () => { doctorCalls++; return doctor } },
@@ -17,7 +17,11 @@ const prisma = {
     update: async args => { patientCalls++; query = args; return { id: 'patient-a' } },
   },
 }
+prisma.$transaction = async callback => callback(prisma)
 const mocks = {
+  '@/lib/security/audit': { recordAudit: async () => {} },
+  '@/lib/security/rate-limit': { consumeRateLimit: async () => true },
+  '@/lib/validations/profile.schema': require('../lib/validations/profile.schema.ts'),
   react: { cache: fn => (...args) => { if (!requestMemo.has(fn)) requestMemo.set(fn, fn(...args)); return requestMemo.get(fn) } },
   '@/lib/prisma': { default: prisma },
   '@/lib/auth/doctor-access': access,
@@ -55,7 +59,7 @@ function load(path) {
   assert.equal(query.where.doctorId, doctor.id)
   requestMemo = new Map()
   user = { id: 'auth-b', email: 'b@example.invalid', email_confirmed_at: 'fixture' }
-  doctor = { id: 'doctor-b', supabaseId: 'auth-b', email: 'b@example.invalid' }
+  doctor = { active: true, id: 'doctor-b', supabaseId: 'auth-b', email: 'b@example.invalid' }
   assert.equal((await auth.getCurrentDoctor()).id, 'doctor-b')
   assert.equal(doctorCalls, 2)
   console.log('PASS: request-local doctor deduplication, doctor isolation, lightweight directory/history and one-write patient updates')

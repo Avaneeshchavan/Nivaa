@@ -28,7 +28,7 @@ export default function PatientDirectory({ initialPatients }: { initialPatients:
     setLoading(true)
     setError('')
     try {
-      const response = await fetch(`/api/patients?q=${encodeURIComponent(term)}`, { signal: controller.signal, cache: 'no-store', redirect: 'error' })
+      const response = await fetch('/api/patients', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: term }), signal: controller.signal, cache: 'no-store', redirect: 'error' })
       if (!response.ok) throw new Error('Search failed. Please try again.')
       const data: DirectoryPatient[] = await response.json()
       if (!controller.signal.aborted) setPatients(data)

@@ -1,8 +1,8 @@
 import * as z from 'zod'
 
 export const patientSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  dob: z.string().optional().nullable(),
+  name: z.string().trim().max(160).min(2, { message: 'Name must be at least 2 characters.' }),
+  dob: z.union([z.literal(''), z.iso.date().refine(value => value <= new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }), 'Date of birth cannot be in the future')]).optional().nullable(),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER']).optional().nullable(),
   phone: z
     .string()
@@ -10,7 +10,7 @@ export const patientSchema = z.object({
     .optional()
     .or(z.literal(''))
     .nullable(),
-  address: z.string().optional().nullable(),
+  address: z.string().trim().max(2000).optional().nullable(),
   allergies: z.string().trim().max(2000).optional().nullable(),
 })
 

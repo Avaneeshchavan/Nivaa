@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import { databaseConnection } from '../lib/database-connection'
 import { Pool } from 'pg'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '../lib/generated/prisma/client'
@@ -19,7 +20,7 @@ async function main() {
   }
   const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL
   if (!connectionString) throw new Error('Set DIRECT_URL (or DATABASE_URL) before seeding')
-  const pool = new Pool({ connectionString, connectionTimeoutMillis: 10000 })
+  const pool = new Pool({ ...databaseConnection(connectionString), connectionTimeoutMillis: 10000 })
   const prisma = new PrismaClient({ adapter: new PrismaPg(pool) })
   try {
     const existing = await prisma.medicine.findMany({ select: { id: true, name: true, form: true } })

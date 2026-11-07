@@ -6,10 +6,13 @@ const ts = require('typescript')
 const { handwritingSchema, parseHandwriting, strokePath } = require('../lib/validations/handwriting.schema.ts')
 const { rxDraftSchema } = require('../lib/validations/draft.schema.ts')
 const { prescriptionSchema } = require('../lib/validations/prescription.schema.ts')
-const doctor = { id: 'doctor-a', supabaseId: '11111111-1111-4111-8111-111111111111' }
+const doctor = { active: true, id: 'doctor-a', supabaseId: '11111111-1111-4111-8111-111111111111' }
 let currentDoctor = doctor, query, writes = 0, uploads = 0, storedPath, updatedAt = '2026-11-07T10:00:00.000Z'
 const handwriting = { strokes: [[[0, 0], [500, 300], [1000, 600]]], photoId: null }
 const mocks = {
+  '@/lib/security/audit': { recordAudit: async () => {} },
+  '@/lib/security/rate-limit': { consumeRateLimit: async () => true },
+  '@/lib/validations/profile.schema': require('../lib/validations/profile.schema.ts'),
   '@/actions/auth.actions': { getCurrentDoctor: async () => currentDoctor },
   './auth.actions': { getCurrentDoctor: async () => currentDoctor },
   '@/lib/validations/prescription.schema': require('../lib/validations/prescription.schema.ts'),
@@ -41,6 +44,8 @@ const mocks = {
     },
   } } },
 }
+const database = mocks['@/lib/prisma'].default
+database.$transaction = async callback => callback(database)
 const exported = {}
 function loadAction(file, result) {
 vm.runInNewContext(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
@@ -51,6 +56,14 @@ loadAction('actions/handwriting.actions.ts', exported)
 const rxActions = {}
 loadAction('actions/prescriptions.actions.ts', rxActions)
 ;(async () => {
+  const { useRxBuilderStore } = require('../stores/rxBuilderStore.ts')
+  useRxBuilderStore.setState({ patientId: 'patient-a', diagnosis: 'Synthetic', medicines: [{ id: 'm', name: 'Synthetic medicine', dosage: '', frequency: '', duration: '', instructions: '' }], notes: 'Private to patient A', handwriting })
+  useRxBuilderStore.getState().setPatientId('patient-b')
+  assert.equal(useRxBuilderStore.getState().diagnosis, '')
+  assert.equal(useRxBuilderStore.getState().medicines.length, 0)
+  assert.equal(useRxBuilderStore.getState().notes, '')
+  assert.equal(useRxBuilderStore.getState().handwriting.strokes.length, 0)
+  useRxBuilderStore.getState().reset()
   assert.deepEqual(parseHandwriting(null), { strokes: [], photoId: null })
   assert.equal(handwritingSchema.safeParse(handwriting).success, true)
   for (const value of [

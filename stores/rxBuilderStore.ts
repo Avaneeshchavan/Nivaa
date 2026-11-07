@@ -52,7 +52,9 @@ export const useRxBuilderStore = create<RxBuilderState>((set) => ({
 
   setHandwriting: (handwriting) => set({ handwriting }),
   setVisit: (visit) => set({ visit }),
-  setPatientId: (id) => set(state => ({ patientId: id, ...(id !== state.patientId ? { visit: { ...emptyVisitForm }, handwriting: emptyHandwriting } : {}) })),
+  setPatientId: (id) => set(state => state.patientId && id !== state.patientId
+    ? { ...initialState, patientId: id }
+    : { patientId: id }),
   setDiagnosis: (diagnosis) => set({ diagnosis }),
   
   addMedicine: (medicine) => 

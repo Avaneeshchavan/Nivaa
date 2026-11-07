@@ -1,23 +1,63 @@
-# Task 3.2 — doctor admission
+# Nivaa deployment and access runbook
 
-This is the admission setup for task 3.2, not the full task 4.1 deployment runbook.
+Production is `https://nivaa-kohl.vercel.app` in the existing Vercel `nivaa` project. The project uses Node 22, the explicit Next.js preset and Mumbai (`bom1`) functions. Preserve this project identity when deploying updates.
 
-## App-side implementation
+## Required application variables
 
-Configure the **server-only** `ALLOWED_DOCTOR_EMAILS` variable as exactly two different comma-separated email addresses. Matching trims whitespace and ignores case; aliases are not inferred. Missing, invalid, duplicate or extra entries deny access to everyone. Do not prefix the variable with NEXT_PUBLIC_. No environment file was edited by this task.
+| Name | Source and purpose |
+| --- | --- |
+| NEXT_PUBLIC_SUPABASE_URL | Supabase Project Settings → API / project URL. Used by Auth and Storage. |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY | Same project → API Keys → existing public anon key. Public by design and constrained by RLS. |
+| DATABASE_URL | Supabase Connect → transaction/session pooler connection for Prisma runtime. Server-only. |
+| DIRECT_URL | Supabase Connect → direct or session-pooler connection suitable for migrations. Server-only. |
+| ALLOWED_DOCTOR_EMAILS | Exactly the two approved doctor emails, comma separated. Server-only. |
 
-The login Server Action checks the allowlist before calling Supabase and returns a generic failure. It admits only a verified Supabase user with confirmed email and a provisioned Doctor row whose email matches that identity. Rejected provisioned sessions are signed out. Middleware also checks the confirmed identity/allowlist; every record action/API still calls getCurrentDoctor independently. Dashboard/root redirects require the Doctor gate. Patient search strings are removed from login redirects.
+All five are already configured for this production project. Keep secrets in the existing local secret environment and Vercel's encrypted variable store. A source archive excludes all `.env*` files. Backup-only variables are described in BACKUPS.md and belong in the trusted backup environment.
 
-## HUMAN — stop here before considering 3.2 complete
+## Doctor admission
 
-1. Choose the two actual doctor email addresses. In Vercel project Settings → Environment Variables, set ALLOWED_DOCTOR_EMAILS for the intended environment, then redeploy when ready. For local operation, supply it through the launching shell/process environment. Keep credentials private. The app will deny access until this is configured correctly.
-2. Open Supabase → Authentication → Sign In / Providers. Turn **Allow new users to sign up** OFF and save. Keep only the sign-in methods the clinic needs; disable anonymous sign-ins. Under the Email provider, verify Confirm Email is enabled. See [Supabase's configuration reference](https://supabase.com/docs/guides/auth/general-configuration).
-3. Under Authentication → Users, inspect the accounts. Provision/confirm only the two approved doctors through the trusted admin/invitation workflow, and verify each existing Doctor.supabaseId and Doctor.email mapping. Do not automatically create Doctor rows from public signups. Review any other existing accounts and revoke/remove unauthorized access through the dashboard; disabling signup does not disable existing accounts.
-4. Review direct Storage access too. The app allowlist does not change Supabase JWT admission or the existing owner-based Storage policies: an already signed-in identity outside the app allowlist can still use its own UUID's objects directly while its token remains valid. Session revocation alone does not immediately invalidate all issued access JWTs. Resolve unwanted identities/policies and account for token expiry before declaring access removed. Existing signed download links remain bearer credentials until their short expiry.
-5. Test with synthetic data: both approved doctors can sign in and access their own records; wrong password, an unapproved identity, unconfirmed email and missing/mismatched Doctor rows cannot access patient pages, direct APIs or Server Actions. Verify direct Supabase signup is disabled and third-party identities cannot obtain unwanted Storage access. Test the real hosted session flow; local mocks cannot certify dashboard settings.
+Supabase Authentication settings currently report disabled public signup. There are two confirmed allowlisted Doctor/Auth mappings. Keep unused/anonymous providers disabled and review account administrator MFA. Test the two normal accounts on the clinic devices.
 
-Task 3.2 remains unchecked until these HUMAN actions are completed and confirmed. Tasks 3.3–3.5 were not started in this batch. Previous HUMAN migration/Storage checks in docs/STORAGE_SECURITY.md also remain prerequisites for clinical use.
+For immediate doctor revocation, the database administrator sets that Doctor row's `active` value to false and handles Supabase session/account revocation. The app and Storage membership function check this flag. Changing only the Vercel email variable leaves direct Storage membership to the database rule. Existing signed PDF links last up to 60 seconds. Account recovery and password changes are owner operations.
 
-## Local verification
+## Release commands
 
-`node scripts/check-doctor-access.cjs` tests malformed/missing allowlists, both approved identities, third-party/unconfirmed users, matching Doctor rows, login failures and rejected-session cleanup using synthetic mocks. TypeScript and production build are required separately. No live accounts, settings or data were changed.
+Start from the intended branch with all intended source changes committed. Review the diff and confirm the Git remote is Avaneeshchavan/Nivaa. Install the locked dependencies, generate Prisma, run tests and apply additive migrations before releasing code that reads added columns.
+
+```sh
+npm ci
+npx prisma generate
+npx tsc --noEmit
+npm run build
+node scripts/check-security-operations.cjs
+node scripts/check-storage-config.mjs
+node scripts/migrate-verified.mjs deploy
+```
+
+The migration helper works around the native engine's CA-loading failure on this machine. It binds an ephemeral loopback listener and establishes certificate/hostname-verified TLS to Supabase before forwarding startup or authentication bytes. Only local loopback traffic uses a non-TLS PostgreSQL connection. Runtime and seed connections use verified TLS directly. The official public CA is tracked and included in function traces, with validity through April 2031. Review certificate rotation before expiry.
+
+Use the existing `.vercel/project.json` association and deploy only tracked committed source. The project is already linked, so relinking is unnecessary. `vercel link` can update local tooling environment state.
+
+```sh
+nivaa_stage=$(mktemp -d /tmp/nivaa-deploy.XXXXXX)
+git archive --format=tar HEAD | tar -xf - -C "$nivaa_stage" --exclude='.env*'
+mkdir "$nivaa_stage/.vercel"
+cp .vercel/project.json "$nivaa_stage/.vercel/project.json"
+npx --yes vercel@latest deploy --prod --yes --scope avaneeshchavans-projects --cwd "$nivaa_stage"
+node scripts/smoke-test.mjs https://nivaa-kohl.vercel.app
+node scripts/check-availability.mjs
+```
+
+Wait for READY and the production alias. Inspect function outputs to confirm `bom1`. Public smoke tests exercise anonymous access. Complete the signed-in checklist in PARENTS_QUICKSTART.md on the target devices.
+
+## Logging and previews
+
+New patient-search and duplicate-check UI requests send clinical search terms in bounded POST bodies. Search terms are removed from browser URLs. Keep request-body logging disabled in platform log drains and integrations. The legacy GET search endpoints remain for old deployed clients and should be retired after the transition. Console errors use generic messages.
+
+The application audit log stores doctor ID, action, resource ID and timestamp. Primary database writes and their audit event commit together. Working drafts, directory result views and direct Storage reads have the coverage limitations in SECURITY_REVIEW.md. Audit metadata is sensitive and remains server-only.
+
+Use isolated synthetic-data projects for previews and review preview access controls. The source code cannot prove Vercel/Supabase organization MFA, log-retention policy or future environment changes. Keep private clinic records and credentials out of handoff files and screenshots.
+
+## Recovery and availability
+
+Follow BACKUPS.md for the full application/Storage export, weekly procedure, isolated restoration and Free-plan pause contingency. Twelve current tracked migrations are additive to the original baseline. Avoid migration reset or data-dropping flows against the clinic project. Certificate and admission changes require restarting a local development server so it creates a new connection pool.

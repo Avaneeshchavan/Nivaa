@@ -15,7 +15,7 @@ export default function PatientPicker({ onSelect }: { onSelect: (patient: Prescr
     setStatus('Searching…')
     const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/patients?scope=prescription&q=${encodeURIComponent(query)}`, { signal: controller.signal, cache: 'no-store', redirect: 'error' })
+        const response = await fetch('/api/patients', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: query, scope: 'prescription' }), signal: controller.signal, cache: 'no-store', redirect: 'error' })
         if (!response.ok) throw new Error('Search unavailable')
         const patients: PrescriptionPatient[] = await response.json()
         if (!controller.signal.aborted) { setResults(patients); setStatus(patients.length ? '' : 'No patients found') }

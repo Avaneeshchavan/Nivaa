@@ -12,18 +12,16 @@ import {
   seedDefaultTemplates
 } from '@/actions/templates.actions'
 import { updateDoctorProfile } from '@/actions/auth.actions'
-import { Doctor, DiseaseTemplate, Medicine } from '@/lib/generated/prisma/client'
-import { RxMedicine } from '@/lib/templates/defaultTemplates'
+import { Doctor, DiseaseTemplate } from '@/lib/generated/prisma/client'
+import type { RxMedicine } from '@/stores/rxBuilderStore'
+import { parseRxMedicines } from '@/lib/validations/prescription.schema'
+import MedicineAutocomplete from '@/components/prescriptions/MedicineAutocomplete'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
-import { useDebouncedCallback } from 'use-debounce'
-import { Plus, Trash2, Edit, Upload, Sparkles, AlertCircle, ChevronsUpDown, HeartPulse, User } from 'lucide-react'
+import { Plus, Trash2, Edit, Upload, Sparkles, AlertCircle, HeartPulse, User } from 'lucide-react'
 
 interface SettingsViewProps {
   initialDoctor: Doctor | null
@@ -67,19 +65,9 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
   const [templateDiagnosis, setTemplateDiagnosis] = useState('')
   const [templateMedicines, setTemplateMedicines] = useState<RxMedicine[]>([])
 
-  // Medicine Search State inside template form
-  const [medPopoverOpen, setMedPopoverOpen] = useState(false)
-  const [medSearch, setMedSearch] = useState('')
-  const [searchLoading, setSearchLoading] = useState(false)
-  const [searchResults, setSearchResults] = useState<Medicine[]>([])
-  const [selectedMed, setSelectedMed] = useState<Medicine | null>(null)
-
-  // Medicine Dosage details inside template form
-  const [medDosage, setMedDosage] = useState('')
-  const [medFrequency, setMedFrequency] = useState('BD')
-  const [medDuration, setMedDuration] = useState('5 Days')
-  const [medInstructions, setMedInstructions] = useState('')
-
+  const [templateSaving, setTemplateSaving] = useState(false)
+  const [templateError, setTemplateError] = useState('')
+  const [editingMedicineId, setEditingMedicineId] = useState<string | null>(null)
   // Handle profile update
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -161,10 +149,10 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
       await seedDefaultTemplates()
       const freshTemplates = await getTemplates()
       setTemplates(freshTemplates)
-      alert('Seeded 5 premium templates successfully!')
+      setProfileMessage({ type: 'success', text: 'Common templates are ready. Review prescribing details before use.' })
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to seed templates'
-      alert(errorMsg)
+      setProfileMessage({ type: 'error', text: errorMsg })
     } finally {
       setSeeding(false)
     }
@@ -176,7 +164,8 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
     setTemplateName('')
     setTemplateDiagnosis('')
     setTemplateMedicines([])
-    resetMedicineForm()
+    setTemplateError('')
+    setEditingMedicineId(null)
     setIsSheetOpen(true)
   }
 
@@ -186,78 +175,23 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
     setTemplateName(t.name)
     setTemplateDiagnosis(t.diagnosis || '')
 
-    const parsedMeds = typeof t.medicines === 'string'
-      ? JSON.parse(t.medicines)
-      : (t.medicines || [])
-
-    setTemplateMedicines(parsedMeds)
-    resetMedicineForm()
+    try { setTemplateMedicines(parseRxMedicines(t.medicines)) }
+    catch { setProfileMessage({ type: 'error', text: 'This saved template has invalid medicine data. Keep the original and contact support.' }); return }
+    setTemplateError('')
+    setEditingMedicineId(null)
     setIsSheetOpen(true)
-  }
-
-  const resetMedicineForm = () => {
-    setSelectedMed(null)
-    setMedSearch('')
-    setSearchResults([])
-    setMedDosage('')
-    setMedFrequency('BD')
-    setMedDuration('5 Days')
-    setMedInstructions('')
-  }
-
-  // Search Medicines Debounced
-  const fetchMedicines = useDebouncedCallback(async (query: string) => {
-    if (!query) {
-      setSearchResults([])
-      return
-    }
-    setSearchLoading(true)
-    try {
-      const res = await fetch(`/api/medicines?q=${encodeURIComponent(query)}`)
-      const data = await res.json()
-      setSearchResults(data)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setSearchLoading(false)
-    }
-  }, 300)
-
-  const handleMedSearchChange = (val: string) => {
-    setMedSearch(val)
-    fetchMedicines(val)
-  }
-
-  // Add medicine item to template
-  const handleAddMedicineToTemplate = () => {
-    if (!selectedMed) return
-    const newRxMed: RxMedicine = {
-      id: crypto.randomUUID(),
-      name: selectedMed.name,
-      generic: selectedMed.generic || null,
-      form: selectedMed.form || null,
-      dosage: medDosage,
-      frequency: medFrequency,
-      duration: medDuration,
-      instructions: medInstructions || null
-    }
-
-    setTemplateMedicines([...templateMedicines, newRxMed])
-    resetMedicineForm()
-  }
-
-  // Remove medicine item from template
-  const handleRemoveMedicineFromTemplate = (id: string) => {
-    setTemplateMedicines(templateMedicines.filter(m => m.id !== id))
   }
 
   // Save Template Action
   const handleTemplateSave = async () => {
-    if (!templateName) {
-      alert('Template Name is required')
+    if (templateSaving) return
+    if (!templateName.trim()) {
+      setTemplateError('Enter a template title.')
       return
     }
 
+    setTemplateSaving(true)
+    setTemplateError('')
     try {
       if (editingTemplate) {
         await updateTemplate(editingTemplate.id, {
@@ -275,10 +209,10 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
       const freshTemplates = await getTemplates()
       setTemplates(freshTemplates)
       setIsSheetOpen(false)
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Error saving template'
-      alert(errorMsg)
-    }
+      setProfileMessage({ type: 'success', text: 'Template saved.' })
+    } catch {
+      setTemplateError('Template could not be saved. Check the entries and try again.')
+    } finally { setTemplateSaving(false) }
   }
 
   // Delete Template Action
@@ -290,7 +224,7 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
       setTemplates(freshTemplates)
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Error deleting template'
-      alert(errorMsg)
+      setProfileMessage({ type: 'error', text: errorMsg })
     }
   }
 
@@ -484,7 +418,7 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
               <HeartPulse className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <h3 className="font-semibold text-foreground">No Templates Found</h3>
               <p className="text-sm text-muted-foreground max-w-sm mx-auto mt-1 mb-6">
-                Get started quickly by loading our premium default disease templates or design your own bespoke prescription flow.
+                Get started quickly by loading our common disease templates or create your own templates.
               </p>
               <Button onClick={handlePreSeed} disabled={seeding} variant="outline">
                 Load Default Templates
@@ -493,9 +427,8 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {templates.map((t) => {
-                const meds = typeof t.medicines === 'string'
-                  ? JSON.parse(t.medicines)
-                  : (t.medicines || [])
+                let meds: RxMedicine[] = []
+                try { meds = parseRxMedicines(t.medicines) } catch { /* Keep malformed legacy templates visible for review. */ }
                 return (
                   <Card key={t.id} className="border border-gray-100 hover:shadow-md transition-shadow duration-200 flex flex-col justify-between">
                     <CardHeader className="pb-3">
@@ -545,203 +478,55 @@ export default function SettingsView({ initialDoctor, initialTemplates, initialT
         </div>
       )}
 
-      {/* Slide-over sheet for template addition / editing */}
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto h-full flex flex-col justify-between">
-          <div className="space-y-6">
-            <SheetHeader>
-              <SheetTitle>{editingTemplate ? 'Edit Template' : 'Create Disease Template'}</SheetTitle>
-              <SheetDescription>Configure a custom diagnostic profile with standard medicine packages.</SheetDescription>
-            </SheetHeader>
-
-            <div className="space-y-4">
+      <Sheet open={isSheetOpen} onOpenChange={open => { if (!templateSaving) setIsSheetOpen(open) }}>
+        <SheetContent showCloseButton={!templateSaving} className="data-[side=right]:w-full data-[side=right]:sm:max-w-2xl gap-0 overflow-hidden p-0">
+          <SheetHeader className="shrink-0 border-b px-5 py-5 pr-16 sm:px-6 sm:pr-16">
+            <SheetTitle className="text-xl font-semibold">{editingTemplate ? 'Edit template' : 'Create template'}</SheetTitle>
+            <SheetDescription className="mt-1 text-base">Save a diagnosis and medicine setup for repeat visits.</SheetDescription>
+          </SheetHeader>
+          <form className="flex min-h-0 flex-1 flex-col" onSubmit={event => { event.preventDefault(); void handleTemplateSave() }}>
+            <fieldset disabled={templateSaving} className="min-h-0 min-w-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
               <div className="space-y-2">
-                <label htmlFor="settings-templateName" className="text-sm font-semibold text-foreground">Template Title</label>
-                <Input
-                  id="settings-templateName" value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
-                  placeholder="e.g. URTI Package, Gastritis Standard..."
-                  className="h-12"
-                />
+                <label htmlFor="settings-templateName" className="block font-semibold">Template title</label>
+                <Input id="settings-templateName" value={templateName} onChange={event => setTemplateName(event.target.value)} required maxLength={160} placeholder="Name this template" />
               </div>
-
               <div className="space-y-2">
-                <label htmlFor="settings-templateDiagnosis" className="text-sm font-semibold text-foreground">Standard Diagnosis</label>
-                <Input
-                  id="settings-templateDiagnosis" value={templateDiagnosis}
-                  onChange={(e) => setTemplateDiagnosis(e.target.value)}
-                  placeholder="e.g. Acute Gastroenteritis"
-                  className="h-12"
-                />
+                <label htmlFor="settings-templateDiagnosis" className="block font-semibold">Diagnosis</label>
+                <Input id="settings-templateDiagnosis" value={templateDiagnosis} onChange={event => setTemplateDiagnosis(event.target.value)} maxLength={4000} placeholder="Enter the diagnosis" />
               </div>
-
-              {/* Medicine items config in template */}
-              <div className="space-y-3 pt-2">
-                <label className="text-sm font-semibold text-foreground block">Saved Medicines Package</label>
-
-                {/* Display added medicines */}
-                <div className="space-y-2">
-                  {templateMedicines.map((med, idx) => (
-                    <div key={med.id} className="p-3 bg-gray-50 border rounded-lg flex justify-between items-start gap-4">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-foreground text-sm truncate">{idx + 1}. {med.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{med.dosage} • {med.frequency} • {med.duration}</p>
-                        {med.instructions && <p className="text-xs text-muted-foreground mt-1">Note: {med.instructions}</p>}
-                      </div>
-                      <button
-                        onClick={() => handleRemoveMedicineFromTemplate(med.id)}
-                        className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+              <section className="space-y-3" aria-labelledby="template-medicines-heading">
+                <h3 id="template-medicines-heading" className="font-semibold">Saved medicines <span className="text-muted-foreground">({templateMedicines.length})</span></h3>
+                {templateMedicines.length === 0 && <p className="rounded-xl border border-dashed p-4 text-muted-foreground">Add medicines below to build this template.</p>}
+                {templateMedicines.map((medicine, index) => <div key={medicine.id} className="space-y-3 rounded-xl border bg-muted/40 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words font-semibold">{index + 1}. {medicine.name}</p>
+                      <p className="mt-1 break-words text-sm text-muted-foreground">{[medicine.dosage, medicine.frequency, medicine.duration].filter(Boolean).join(' · ')}</p>
+                      {medicine.instructions && <p className="mt-2 break-words text-sm text-muted-foreground">{medicine.instructions}</p>}
                     </div>
-                  ))}
-                </div>
-
-                {/* Medicine Search Autocomplete inside Sheet */}
-                <div className="p-4 border rounded-xl bg-white space-y-4 shadow-sm">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Configure Rx Pack Item</p>
-
-                  {!selectedMed ? (
-                    <Popover open={medPopoverOpen} onOpenChange={setMedPopoverOpen}>
-                      <PopoverTrigger
-                        render={
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={medPopoverOpen}
-                            className="w-full h-12 justify-between font-normal text-muted-foreground"
-                          >
-                            Search medicine brand/generic...
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        }
-                      />
-                      <PopoverContent className="w-[calc(100vw-4rem)] sm:w-[480px] p-0" align="start">
-                        <Command shouldFilter={false}>
-                          <CommandInput
-                            placeholder="Type brand or drug generic..."
-                            value={medSearch}
-                            onValueChange={handleMedSearchChange}
-                            className="h-12"
-                          />
-                          <CommandList>
-                            {searchLoading && <div className="p-4 text-sm text-muted-foreground text-center">Searching pharmacy list...</div>}
-                            {!searchLoading && medSearch && searchResults.length === 0 && (
-                              <CommandEmpty>No medicine matches.</CommandEmpty>
-                            )}
-                            {!searchLoading && searchResults.length > 0 && (
-                              <CommandGroup>
-                                {searchResults.map((med) => (
-                                  <CommandItem
-                                    key={med.id}
-                                    value={med.name}
-                                    onSelect={() => {
-                                      setSelectedMed(med)
-                                      setMedPopoverOpen(false)
-                                    }}
-                                    className="py-3 cursor-pointer"
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="font-semibold text-foreground">{med.name}</span>
-                                      {med.generic && <span className="text-xs text-muted-foreground">{med.generic}</span>}
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            )}
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center bg-primary/5 p-3 rounded-lg border border-primary/20">
-                        <div>
-                          <p className="font-semibold text-primary text-sm">{selectedMed.name}</p>
-                          {selectedMed.generic && <p className="text-xs text-muted-foreground">{selectedMed.generic}</p>}
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedMed(null)} className="h-8">
-                          Change
-                        </Button>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-muted-foreground">Dosage</label>
-                          <Input
-                            placeholder="1 tab / 5ml"
-                            value={medDosage}
-                            onChange={(e) => setMedDosage(e.target.value)}
-                            className="h-10 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-muted-foreground">Frequency</label>
-                          <Select value={medFrequency} onValueChange={(val) => { if (val) setMedFrequency(val) }}>
-                            <SelectTrigger className="h-10 text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="OD">OD (Once daily)</SelectItem>
-                              <SelectItem value="BD">BD (Twice daily)</SelectItem>
-                              <SelectItem value="TDS">TDS (Thrice daily)</SelectItem>
-                              <SelectItem value="QID">QID (Four times daily)</SelectItem>
-                              <SelectItem value="SOS">SOS (As needed)</SelectItem>
-                              <SelectItem value="HS">HS (At bedtime)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-muted-foreground">Duration</label>
-                          <Input
-                            placeholder="5 Days / 1 Month"
-                            value={medDuration}
-                            onChange={(e) => setMedDuration(e.target.value)}
-                            className="h-10 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-muted-foreground">Instructions</label>
-                          <Input
-                            placeholder="After food"
-                            value={medInstructions}
-                            onChange={(e) => setMedInstructions(e.target.value)}
-                            className="h-10 text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      <Button
-                        onClick={handleAddMedicineToTemplate}
-                        disabled={!medDosage}
-                        className="w-full h-10 gap-2 text-sm font-medium"
-                      >
-                        <Plus className="w-4 h-4" /> Add Item
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                    <Button type="button" size="icon" variant="ghost" aria-label={`Remove ${medicine.name}`} className="text-red-800" onClick={() => setTemplateMedicines(items => items.filter(item => item.id !== medicine.id))}><Trash2 aria-hidden="true" /></Button>
+                  </div>
+                  <Button type="button" variant="outline" onClick={() => setEditingMedicineId(editingMedicineId === medicine.id ? null : medicine.id)}>{editingMedicineId === medicine.id ? 'Done editing' : 'Edit details'}</Button>
+                  {editingMedicineId === medicine.id && <div className="grid gap-3 sm:grid-cols-2">
+                    {(['dosage', 'frequency', 'duration', 'instructions'] as const).map(field => <label key={field} className="space-y-1 text-sm font-medium capitalize">{field}
+                      <Input value={medicine[field]} maxLength={field === 'instructions' ? 1000 : 160} onChange={event => setTemplateMedicines(items => items.map(item => item.id === medicine.id ? { ...item, [field]: event.target.value } : item))} />
+                    </label>)}
+                  </div>}
+                </div>)}
+              </section>
+              <section className="space-y-3 rounded-xl border p-4" aria-labelledby="template-add-medicine-heading">
+                <h3 id="template-add-medicine-heading" className="font-semibold">Add a medicine</h3>
+                <MedicineAutocomplete onAdd={medicine => setTemplateMedicines(items => [...items, medicine])} />
+              </section>
+            </fieldset>
+            <div className="shrink-0 space-y-3 border-t bg-card px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6">
+              {templateError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-900">{templateError}</p>}
+              <div className="flex gap-3">
+                <Button type="button" variant="outline" disabled={templateSaving} onClick={() => setIsSheetOpen(false)} className="min-h-12 flex-1">Cancel</Button>
+                <Button type="submit" disabled={!templateName.trim() || templateSaving} className="min-h-12 flex-1">{templateSaving ? 'Saving…' : 'Save template'}</Button>
               </div>
             </div>
-          </div>
-
-          <div className="pt-6 border-t mt-8 flex gap-4">
-            <Button
-              variant="outline"
-              onClick={() => setIsSheetOpen(false)}
-              className="flex-1 h-12"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleTemplateSave}
-              disabled={!templateName}
-              className="flex-1 h-12"
-            >
-              Save Template
-            </Button>
-          </div>
+          </form>
         </SheetContent>
       </Sheet>
     </div>

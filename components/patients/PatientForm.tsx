@@ -59,7 +59,7 @@ export default function PatientForm({ initialData }: PatientFormProps) {
     const controller = new AbortController()
     const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/patients/duplicates?${new URLSearchParams({ name, phone })}`, { signal: controller.signal, cache: 'no-store', redirect: 'error' })
+        const response = await fetch('/api/patients/duplicates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, phone }), signal: controller.signal, cache: 'no-store', redirect: 'error' })
         if (!response.ok) throw new Error('Duplicate check unavailable. You can still save.')
         const data = await response.json()
         if (!controller.signal.aborted) setDuplicates(data)

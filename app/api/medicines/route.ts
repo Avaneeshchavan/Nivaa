@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     response.headers.set('Cache-Control', 'private, max-age=300')
     return response
   } catch (error) {
-    console.error('Error fetching medicines:', error)
+    console.error('Medicine search failed')
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

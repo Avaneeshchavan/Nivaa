@@ -19,6 +19,13 @@ try {
     CREATE POLICY legacy_buckets ON storage.buckets FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
   `)
   for (const name of ['202611030003_private_application_tables', '202611030004_private_prescription_storage', '202611030005_signature_storage', '202611030006_rx_drafts', '202611030007_storage_delivery', '202611070002_handwriting_storage']) await migrate(name)
+  await db.exec(`CREATE TABLE auth.users (id uuid PRIMARY KEY, email text, email_confirmed_at timestamptz, banned_until timestamptz)`)
+  for (const [index, uid] of [a,b].entries()) {
+    const email = `fixture${index}@example.invalid`
+    await db.query('INSERT INTO auth.users VALUES ($1,$2,now(),NULL)', [uid, email])
+    await db.query('INSERT INTO "Doctor" (id,"supabaseId",email,"updatedAt") VALUES ($1,$2,$3,now())', [`doctor-${index}`, uid, email])
+  }
+  await migrate('202611070004_storage_membership')
   const flags = (await db.query('SELECT id, public FROM storage.buckets ORDER BY id')).rows
   assert.deepEqual(flags, [{ id: 'logos', public: true }, { id: 'prescription-notes', public: false }, { id: 'prescriptions', public: false }, { id: 'signatures', public: false }])
   for (const bucket of ['logos', 'prescriptions', 'signatures', 'prescription-notes']) {
@@ -42,5 +49,14 @@ try {
     for (const table of ['Doctor', 'Patient', 'Visit', 'Prescription', 'DiseaseTemplate', 'Medicine', 'RxDraft']) await assert.rejects(db.query(`SELECT * FROM "${table}"`), error => error.code === '42501')
     await db.exec('RESET ROLE')
   }
+  await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [a])
+  await db.query('UPDATE "Doctor" SET active=false WHERE "supabaseId"=$1', [a])
+  await db.exec('SET ROLE authenticated')
+  assert.equal((await db.query('SELECT * FROM storage.objects')).rows.length, 0)
+  await db.exec('RESET ROLE')
+  await db.query('UPDATE "Doctor" SET active=true, email=$1 WHERE "supabaseId"=$2', ['mismatch@example.invalid', a])
+  await db.exec('SET ROLE authenticated')
+  assert.equal((await db.query('SELECT * FROM storage.objects')).rows.length, 0)
+  await db.exec('RESET ROLE')
   console.log('PASS: all storage migrations compose; private Rx/signatures, owner-only writes, logo branding and server-only app tables')
 } finally { await db.close() }

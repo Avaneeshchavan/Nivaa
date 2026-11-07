@@ -1,3 +1,4 @@
+require('tsx/cjs')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const vm = require('node:vm')
@@ -6,7 +7,7 @@ const ts = require('typescript')
 
 // Execute the actual handler with synthetic auth/DB/Storage/render boundaries.
 // Hosted JWT, Storage/CDN and real rendering still need deployment smoke tests.
-const doctor = { id: 'doctor-a', supabaseId: '11111111-1111-4111-8111-111111111111' }
+const doctor = { active: true, id: 'doctor-a', supabaseId: '11111111-1111-4111-8111-111111111111' }
 const fixture = { id: 'rx-a', doctorId: doctor.id, patientId: 'patient-a', patient: { doctorId: doctor.id }, visit: { doctorId: doctor.id, patientId: 'patient-a' } }
 let currentDoctor, row, query, rendered, uploaded, uploadError, renderError, signed
 class NextResponse extends Response {
@@ -14,6 +15,8 @@ class NextResponse extends Response {
   static json(body, options) { return Response.json(body, options) }
 }
 const mocks = {
+  '@/lib/security/audit': { recordAudit: async () => {} },
+  '@/lib/security/rate-limit': { consumeRateLimit: async () => true },
   'next/server': { NextResponse },
   '@/actions/auth.actions': { getCurrentDoctor: async () => currentDoctor },
   '@/lib/prisma': { default: { prescription: { findFirst: async args => { query = args; return row } } } },

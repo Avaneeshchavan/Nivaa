@@ -1,3 +1,5 @@
+import { recordAudit } from '@/lib/security/audit'
+import { consumeRateLimit } from '@/lib/security/rate-limit'
 import { getHandwritingPhoto } from '@/lib/handwriting-storage'
 import { getPdfAssets } from '@/lib/pdf-assets'
 import { NextResponse } from 'next/server'
@@ -34,6 +36,7 @@ export async function GET(
       return NextResponse.json({ error: 'Not found or unauthorized' }, { status: 404, headers: privateHeaders })
     }
 
+    if (!await consumeRateLimit('pdf', doctor.id, 60, 60)) return NextResponse.json({ error: 'Too many print requests. Try again in a minute.' }, { status: 429, headers: { ...privateHeaders, 'Retry-After': '60' } })
     const [assets, handwritingPhoto] = await Promise.all([getPdfAssets(doctor), getHandwritingPhoto(doctor.supabaseId, prescription.handwriting)])
     const paperSize = new URL(request.url).searchParams.get('size') === 'A4' ? 'A4' : 'A5'
     // Render PDF to stream
@@ -56,6 +59,7 @@ export async function GET(
       chunks.push(Buffer.from(chunk))
     }
     const pdfBuffer = Buffer.concat(chunks)
+    await recordAudit(doctor.id, 'PDF_VIEW', prescription.id)
 
     // Upload to Supabase Storage
     const supabase = await createClient()

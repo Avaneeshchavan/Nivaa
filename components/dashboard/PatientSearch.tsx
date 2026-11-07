@@ -23,7 +23,7 @@ export default function PatientSearch() {
     const controller = new AbortController()
     setStatus('Searching…')
     const timer = setTimeout(() => {
-      fetch(`/api/patients?q=${encodeURIComponent(query)}`, { signal: controller.signal, cache: 'no-store', redirect: 'error' })
+      fetch('/api/patients', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: query }), signal: controller.signal, cache: 'no-store', redirect: 'error' })
         .then(response => { if (!response.ok) throw new Error('Search unavailable'); return response.json() })
         .then(result => { if (!controller.signal.aborted) { setPatients(result); setStatus(result.length ? '' : 'No patients found') } })
         .catch(() => { if (!controller.signal.aborted) { setPatients([]); setStatus('Search unavailable') } })
