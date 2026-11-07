@@ -116,18 +116,18 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
 
   return (
     <div className="space-y-4">
-      <label className="flex flex-wrap items-center gap-3 text-sm font-medium">Medicine system
-        <select aria-label="Medicine system" className="min-h-11 rounded-lg border bg-card px-3" value={system}
-          onChange={event => {
-            const category = event.target.value as typeof system
-            setSystem(category)
-            setMedicines([])
-            setLoading(Boolean(search.trim()))
-            fetchMedicines(search.trim(), ++searchVersion.current, category)
-          }}>
-          <option value="ALL">All medicines</option><option value="ALLOPATHY">Allopathy</option><option value="AYURVEDIC">Ayurvedic</option>
-        </select>
-      </label>
+      {!selectedMed && <div role="group" aria-label="Optional medicine filter" className="flex flex-wrap gap-2">
+        {([['ALL', 'All medicines'], ['ALLOPATHY', 'Allopathy'], ['AYURVEDIC', 'AYUSH']] as const).map(([category, label]) => (
+          <Button key={category} type="button" size="sm" variant={system === category ? 'default' : 'outline'}
+            className="min-h-11 rounded-full" aria-pressed={system === category}
+            onClick={() => {
+              setSystem(category)
+              setMedicines([])
+              setLoading(Boolean(search.trim()))
+              fetchMedicines(search.trim(), ++searchVersion.current, category)
+            }}>{label}</Button>
+        ))}
+      </div>}
 
       {!selectedMed ? (
         <Command shouldFilter={false} className="rounded-xl border border-input bg-card">
@@ -155,7 +155,7 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
                     className="min-h-11 py-3 cursor-pointer"
                   >
                     <div className="flex flex-col">
-                      <span className="font-medium">{med.name} <span className="text-xs font-normal text-muted-foreground">· {med.system === 'AYURVEDIC' ? 'Ayurvedic' : 'Allopathy'}</span></span>
+                      <span className="font-medium">{med.name} <span className="inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">{med.system === 'AYURVEDIC' ? 'AYUSH' : 'Allopathy'}</span></span>
                       {(med.generic || med.form) && (
                         <span className="text-sm text-muted-foreground">
                           {med.generic} {med.form ? `• ${med.form}` : ''}
