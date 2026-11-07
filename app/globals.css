@@ -165,3 +165,10 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* The dashboard main is the scroll container; reserve the measured sticky bar
+   plus the iPad safe area even when buttons or errors wrap onto extra rows. */
+#main-content:has([data-rx-builder]) {
+  padding-bottom: calc(var(--rx-action-bar-height, 8rem) + env(safe-area-inset-bottom, 0px) + 1rem);
+  scroll-padding-bottom: calc(var(--rx-action-bar-height, 8rem) + env(safe-area-inset-bottom, 0px) + 1rem);
+}

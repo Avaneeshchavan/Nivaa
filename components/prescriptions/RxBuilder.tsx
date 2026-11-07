@@ -1,8 +1,9 @@
 'use client'
 
 import { useRxAutosave } from './useRxAutosave'
+import { reserveScrollSpace } from '@/lib/prescriptions/scroll-reservation'
 import type { RxDraft } from '@/lib/validations/draft.schema'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRxBuilderStore } from '@/stores/rxBuilderStore'
 import { createPrescription } from '@/actions/prescriptions.actions'
@@ -38,6 +39,10 @@ interface RxBuilderProps {
 
 export default function RxBuilder({ allowPatientChange, initialPatientId, patients, templates, duplicate, doctor, draftKey, savedDraft }: RxBuilderProps) {
   const router = useRouter()
+  const actionBarRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (actionBarRef.current) return reserveScrollSpace(actionBarRef.current, '--rx-action-bar-height')
+  }, [])
   const {
     visit, setVisit,
     patientId, setPatientId,
@@ -124,7 +129,7 @@ export default function RxBuilder({ allowPatientChange, initialPatientId, patien
   const canSave = Boolean(patientId && (diagnosis.trim() || medicines.length || notes.trim() || handwriting.strokes.length || handwriting.photoId) && !saving && !handwritingBusy)
 
   return (
-    <div className="space-y-5">
+    <div data-rx-builder className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="clinic-kicker mb-2">Prescriptions</p>
@@ -228,7 +233,7 @@ export default function RxBuilder({ allowPatientChange, initialPatientId, patien
           </section>
 
           <Button variant="outline" onClick={() => setPreviewEnabled(value => !value)}>{previewEnabled ? 'Hide print preview' : 'Show print preview'}</Button>
-          <div className="sticky bottom-0 z-20 space-y-2 rounded-2xl border bg-card p-3 shadow-md">
+          <div ref={actionBarRef} className="sticky bottom-0 z-20 space-y-2 rounded-2xl border bg-card p-3 shadow-md">
             {saveError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-900">{saveError}</p>}
             <div className="flex flex-wrap items-center gap-2">
               <label className="flex min-h-11 items-center gap-2 font-medium">Paper
