@@ -1,6 +1,6 @@
 # N1 implementation and review handoff
 
-Branch: v2/brand-catalog. Source: user-supplied NRCeS Flat Files ZIP. The owner
+Branch: [v2/brand-catalog](https://github.com/Avaneeshchavan/Nivaa/tree/v2/brand-catalog). Source: user-supplied NRCeS Flat Files ZIP. The owner
 confirmed an applicable Affiliate License before import. N2 has not been started.
 
 ## Implemented
@@ -98,4 +98,3 @@ settings were reused; no secrets, dependencies or provider plans changed.
 
 A final documentation-only commit records this deployment; it requires no new
 application deployment. N1 implementation is complete. N2 was not started.
-
