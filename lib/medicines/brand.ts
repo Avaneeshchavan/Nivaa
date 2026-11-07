@@ -18,12 +18,12 @@ export function strengthText(name: string) {
   return match?.[1] || null
 }
 export type BrandChoice = {
-  id: string; brandId?: string; name: string; generic: string | null; form: string | null
+  id: string; brandId?: string; brandName?: string; name: string; generic: string | null; form: string | null
   manufacturer: string | null; strengthText?: string | null; system: string
   composition?: string; isFavorite?: boolean; defaults?: Pick<DoctorMedicinePref, 'defaultPattern' | 'defaultFood' | 'defaultDurationDays' | 'defaultInstruction' | 'defaultDosage' | 'defaultFrequency' | 'defaultDuration'> | null
 }
 export function brandChoice(brand: Brand, pref?: DoctorMedicinePref | null): BrandChoice {
-  return { id: brand.id, brandId: brand.id, name: brand.name, generic: brand.compositionText || null,
+  return { id: brand.id, brandId: brand.id, brandName: brand.name, name: brand.name, generic: brand.compositionText || null,
     form: brand.formText, manufacturer: brand.manufacturer, strengthText: brand.strengthText,
     composition: brand.compositionText, system: brand.system === 'AYUSH' ? 'AYURVEDIC' : brand.system,
     isFavorite: pref?.isFavorite || false, defaults: pref ? {

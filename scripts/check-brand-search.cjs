@@ -17,7 +17,7 @@ const db = new PGlite({ extensions: { pg_trgm } })
  await db.exec(fs.readFileSync('prisma/migrations/202611070006_brand_catalog/migration.sql','utf8'))
  assert.equal((await db.query('SELECT * FROM "Brand" WHERE "legacyMedicineId"=\'old\'')).rows.length,1)
  const names = ['Ondem MD 4 mg','Ondem 4 mg','Ondem 8 mg','Uprise D3 600000 IU/mL','Aciloc 300 mg','Pan 40 mg','Dolo 650 mg','Azithral 500 mg','Montair LC','Cetzine 10 mg']
- const fixtures = names.map((name,index)=>makeBrand({source:'SEED_DATASET',sourceId:String(index),name,formText:'tablet',manufacturer:index<4?'Alkem':'Synthetic company',compositionText:name.startsWith('Ondem')?'Ondansetron 4 mg':'Synthetic composition',system:'ALLOPATHY'}))
+ const fixtures = names.map((name,index)=>makeBrand({source:'SEED_DATASET',sourceId:String(index),name,formText:index===3?'injection':'tablet',manufacturer:index<4?'Alkem':'Synthetic company',compositionText:name.startsWith('Ondem')?'Ondansetron 4 mg':'Synthetic composition',system:'ALLOPATHY'}))
  for(let i=fixtures.length;i<200;i++) fixtures.push(makeBrand({source:'SEED_DATASET',sourceId:String(i),name:`Synthetic fixture ${i}`,formText:'tablet',system:'ALLOPATHY'}))
  assert.equal((await db.query(insertBrandsSql,[JSON.stringify(fixtures)])).rows.length,200)
  assert.equal((await db.query(insertBrandsSql,[JSON.stringify(fixtures)])).rows.length,0,'idempotent import')
@@ -28,7 +28,9 @@ const db = new PGlite({ extensions: { pg_trgm } })
   assert.ok(rows.length<=20)
  }
  for(const q of ['ondam md','ondm','azitharl','acilco 300']) assert.ok((await search(q)).length>0,`typo ${q}`)
+ for(const row of await search('ondem md')) assert.match(row.name,/MD/,'MD modifier must refine presentations')
  for(const row of await search('ondem 4')) assert.match(row.name,/4/,'numeric strength must refine results even with fuzzy names')
+ assert.equal((await search('uprise d3 tablet')).length,0,'explicit tablet query must not return an injection')
  const favorite=fixtures[9]
  await db.query(`INSERT INTO "DoctorMedicinePref" ("doctorId","brandId","useCount","isFavorite","defaultDosage") VALUES ('a',$1,7,true,'Doctor A only')`,[favorite.id])
  assert.equal((await search(''))[0].id,favorite.id)

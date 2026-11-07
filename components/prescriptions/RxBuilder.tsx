@@ -175,7 +175,7 @@ export default function RxBuilder({ allowPatientChange, initialPatientId, patien
               <h2 id="rx-medicines-heading" className="text-lg font-semibold">Medicines</h2>
               <span className="rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground">{medicines.length} added</span>
             </div>
-            <MedicineAutocomplete />
+            <MedicineAutocomplete key={patientId || 'new'} />
           <div className="space-y-3">
             {medicines.map((med, idx) => (
               <div key={med.id} className="bg-muted/60 p-4 rounded-xl border flex flex-wrap justify-between items-start gap-4 animate-in slide-in-from-bottom-2">

@@ -136,7 +136,7 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
         <Command shouldFilter={false} className="rounded-xl border border-input bg-card">
           <CommandInput
             aria-label="Search for a medicine"
-            placeholder="Search by brand or generic name"
+            placeholder="Search brand, generic or company"
             value={search}
             onValueChange={handleSearch}
             onFocus={() => fetchMedicines(search.trim(), ++searchVersion.current, system)}
@@ -254,7 +254,7 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
           </Button>
         </div>
       )}
-      <p className="text-xs text-muted-foreground">Catalog: NRCeS / C-DAC, Pune · <a className="underline" href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>. Includes licensed SNOMED CT content. Source entries reformatted for search; availability and clinical suitability require doctor review.</p>
+      <p className="text-xs text-muted-foreground">Catalog: NRCeS / C-DAC, Pune · <a className="underline" href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>. Includes licensed SNOMED CT content. Source entries reformatted for search; availability and clinical suitability require doctor review. <a href="/catalog-notices/nrces-license.txt" target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center underline">Source license notices</a></p>
     </div>
   )
 }

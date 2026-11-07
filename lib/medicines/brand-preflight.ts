@@ -40,7 +40,7 @@ export function parseCatalog(text: string, delimiter: ',' | '\t'): CatalogRow[] 
 
 export function readJsonCatalog(text: string): CatalogRow[] {
   const value: unknown = JSON.parse(text)
-  if (!Array.isArray(value) || !value.every(row => row && typeof row === 'object' && !Array.isArray(row) && Object.values(row).every(item => item === null || ['string', 'number', 'boolean'].includes(typeof item)))) {
+  if (!Array.isArray(value) || !value.every(row => row && typeof row === 'object' && !Array.isArray(row) && Object.values(row).every(item => item === null || typeof item === 'string' || typeof item === 'boolean' || (typeof item === 'number' && Number.isFinite(item) && (!Number.isInteger(item) || Number.isSafeInteger(item)))))) {
     throw new Error('Expected an array of flat catalog objects')
   }
   return value.map(row => Object.fromEntries(Object.entries(row).map(([key, item]) => [key, item == null ? '' : String(item)])))

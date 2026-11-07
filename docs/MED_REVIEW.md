@@ -21,3 +21,13 @@ Please compare the full list in `prisma/medicine-catalog.ts` against the clinic'
 | Diclofenac gel, terbinafine cream/tablet and levothyroxine | Confirm local product form and salt naming. |
 
 For all entries: check salts (especially metoprolol and nitrofurantoin), release characteristics, inhaler strength per actuation, and liquid concentrations. Different release forms are separate entries. No brands or brand-to-generic equivalence have been inferred. Any correction to a seeded record should be made deliberately; re-running the seed preserves existing records rather than overwriting them.
+
+## N1 NRCeS source review
+
+Imported catalog records remain unverified for the clinic. Have the doctors review
+the exact source name, form, composition and company. This package contains oral
+and orodispersible Ondem MD records and only an injection presentation of Uprise
+D3. No oral Uprise entry or dosing guidance has been invented. The source has no
+discontinued flag and reports UNKNOWN marketing-license status; neither proves
+current clinical suitability/approval. Supply actual top-100 brands, including
+strength/form, to find coverage gaps before relying on the catalog in clinic.

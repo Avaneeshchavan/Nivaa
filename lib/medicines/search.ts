@@ -22,7 +22,11 @@ export const brandSearchSql = `
  FROM candidates c JOIN public."Brand" b ON b.id=c.id CROSS JOIN input i
  LEFT JOIN public."DoctorMedicinePref" p ON p."brandId"=b.id AND p."doctorId"=i.doctor
  WHERE NOT b."isDiscontinued" AND (i.system='ALL' OR b.system::text=i.system)
- AND NOT EXISTS (SELECT 1 FROM unnest(string_to_array(i.q,' ')) t WHERE t ~ '[0-9]' AND NOT (' '||b."nameNormalized"||' ' LIKE '% '||t||' %'))
+ AND NOT EXISTS (SELECT 1 FROM unnest(string_to_array(i.q,' ')) t
+   WHERE rtrim(t,'s') IN ('tablet','capsule','syrup','suspension','drop','injection','ointment','cream','gel','inhaler','powder','sachet')
+   AND NOT (b.form::text=CASE WHEN rtrim(t,'s')='drop' THEN 'DROPS' ELSE upper(rtrim(t,'s')) END
+     OR position(' '||t||' ' in ' '||lower(b."formText")||' ')>0))
+ AND NOT EXISTS (SELECT 1 FROM unnest(string_to_array(i.q,' ')) t WHERE (t ~ '[0-9]' OR t IN ('md','lc','sr','xr','dsr','forte','plus')) AND NOT ((' '||b."nameNormalized"||' ' LIKE '% '||t||' %') OR EXISTS (SELECT 1 FROM public."BrandAlias" a WHERE a."brandId"=b.id AND ' '||a."aliasNormalized"||' ' LIKE '% '||t||' %')))
  AND (i.q='' OR NOT EXISTS (SELECT 1 FROM unnest(string_to_array(i.q,' ')) t WHERE position(t in b."searchText")=0)
    OR public.nivaa_brand_similarity(i.q,b."nameNormalized")>=0.45
    OR EXISTS (SELECT 1 FROM public."BrandAlias" a WHERE a."brandId"=b.id AND a."aliasNormalized" LIKE i.q||'%'))

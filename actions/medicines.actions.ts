@@ -33,9 +33,9 @@ export async function createCustomMedicine(input: CustomMedicineInput) {
             create: { brandId: saved.id, compositionId: component.id, order }, update: {} })
         }
       }
-      await tx.doctorMedicinePref.upsert({ where: { doctorId_brandId: { doctorId: doctor.id, brandId: saved.id } },
+      const pref = await tx.doctorMedicinePref.upsert({ where: { doctorId_brandId: { doctorId: doctor.id, brandId: saved.id } },
         create: { doctorId: doctor.id, brandId: saved.id, isFavorite: true }, update: { isFavorite: true } })
-      return { medicine: brandChoice(saved), alreadyExists: !inserted.length }
+      return { medicine: brandChoice(saved, pref), alreadyExists: !inserted.length }
     })
   } catch { throw new Error('Could not save the medicine. Try again.') }
 }

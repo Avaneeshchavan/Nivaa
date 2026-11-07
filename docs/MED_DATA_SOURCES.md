@@ -2,8 +2,8 @@
 
 Selected source: **NRCeS Common Drug Codes for India — Flat Files Package**, confirmed by the owner.
 
-Status: **Supplied package and License.txt inspected; owner confirmed an applicable Affiliate License; no production import performed.**
-Checked November 7, 2026. Source selection remains the owner's decision.
+Status: **Supplied package and License.txt inspected; owner confirmed an applicable Affiliate License; 93,897 NRCeS brands imported; see IMPORT_REPORT.md.**
+Checked November 7, 2026. NRCeS source selection and applicable Affiliate License were confirmed by the owner.
 
 | Candidate | Evidence | License / implementation status |
 | --- | --- | --- |
@@ -33,10 +33,10 @@ traceability. Keep raw data locally under ignored data/brands/.
    brand as your parents write it per row. Names alone are sufficient for this
    coverage list; clinical dosing instructions are unnecessary.
 
-The implemented preflight checker only inspects individual local CSV/TSV/JSON
-files. An NRCeS master with unfamiliar headers is reported UNMAPPED, not imported
-as if it were a flattened pharmacy dataset. The full relational importer, brand
-schema, search ranking, preferences and UI integration are still N1 work.
+The relational NRCeS loader and CSV/JSON dataset mapping are implemented in
+scripts/import-brands.ts. The real package was imported and rerun idempotently.
+The preliminary checker remains available for local file inspection. See
+N1_REPORT.md for the implementation and remaining doctor/device acceptance.
 
 ## Supplied package and specific owner review
 
@@ -55,12 +55,10 @@ Do not summarize these combined terms as unrestricted worldwide CC reuse.
 NRCeS's [official FAQ](https://www.nrces.in/faqs) says an Affiliate License is
 required for SNOMED CT use in India even though use within India is free. It also
 describes deployment sublicensing. The [official licensing steps](https://www.nrces.in/standards/snomed-ct)
-direct applicants to MLDS. Confirm whether the developer/clinic already has the
-applicable license and deployment coverage, or complete the required registration
-and agreements personally. This implementation has not accepted an agreement or
+direct applicants to MLDS. The owner has confirmed an applicable Affiliate
+License; the earlier source-review checkpoint is resolved on that basis. This implementation has not accepted an agreement or
 registered an account for the owner. Ask NRCeS if the flat-file application's
-specific use or hosting requires clarification. This is an unresolved deployment
-input, not a claim that the package's CC license is invalid.
+specific use or hosting requires clarification. This confirmation is not an independent legal audit of the clinic's agreements.
 
 The source has no discontinued flag. Its uniformly UNKNOWN marketing-license
 status is not a discontinued status. Source compositions/forms are retained;

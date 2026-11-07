@@ -1,24 +1,36 @@
 # Local medicine catalog inputs
 
-Raw files in this directory are ignored by Git. Only this README and .gitignore
-are tracked. Never place patient exports, prescriptions or credentials here.
+Raw packages, exports and parents_top100.csv stay ignored by Git. Only this README
+and .gitignore are tracked. Keep the original license/release files with the data.
+Do not place patient exports or credentials here.
 
-Read docs/MED_DATA_SOURCES.md before choosing a source. Keep the original package,
-license and release notes locally. The doctor supplies parents_top100.csv with a
-`name` header for the later coverage check. Do not fill it with guessed brands.
-
-Local inspection (no database connection, import, scraping or environment load):
+The owner supplied NRCeS Flat Files under nrces/ and confirmed an applicable
+Affiliate License. The production source import is recorded in IMPORT_REPORT.md.
 
 ```sh
-node --import tsx scripts/preflight-brands.ts data/brands/catalog.csv
+# Local inspection: no database writes.
 node --import tsx scripts/inspect-nrces.ts data/brands/nrces
+node --import tsx scripts/import-brands.ts --dry-run
+# After migration and confirmed rights: resumable transactional import.
+node --import tsx scripts/import-brands.ts --license-confirmed
+# Alternative supported dataset layout; operator must verify that source's license.
+node --import tsx scripts/import-brands.ts data/brands/catalog.csv --dataset --dry-run
 ```
 
-Use the actual file name. CSV uses commas; .tsv/.txt uses tabs; JSON must be an
-array of flat records. Files must resolve inside this folder, including symlinks,
-and be at most 128 MiB. The report is docs/IMPORT_REPORT.md and omits raw contents.
-The named pharmacy-dataset layout is recognized for structural readiness only.
-Unknown generic-checker layouts are UNMAPPED or rejected as malformed. The dedicated inspect-nrces command reads the actual linked NRCeS TSV tables, quarantines bad rows and reports joined source inventory. It performs no database import.
-The tool skips discontinued rows in its counts, flags incomplete rows and marks
-exact presentation duplicate candidates without clinical merging. It ignores
-price. This is a review checkpoint within N1, not a completed N1 importer.
+The pharmacy-dataset layout uses id, name, manufacturer_name, type,
+Is_discontinued, short_composition1, optional short_composition2/pack_size_label.
+Type can denote medical system; dosage form is read from an explicit form field
+or a recognized name suffix. Unknown units, systems and statuses are not guessed.
+Price is discarded. NRCeS has its own exact linked-TSV loader.
+
+Put the doctors' actual frequent brands in parents_top100.csv with a `name` header,
+one medicine name per row, including the strength/form they mean where possible.
+No patient details or dosing guidance are needed. Then run:
+
+```sh
+node --import tsx scripts/coverage-check.ts data/brands/parents_top100.csv
+```
+
+An optional final doctor-id selects that doctor's preference ranking; default is
+the first active doctor. HIT means a lexical match in the top three, not verified
+clinical equivalence. Inspect the actual returned strength/form/company.

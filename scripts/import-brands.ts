@@ -1,14 +1,16 @@
 import { readFile, writeFile, realpath } from 'node:fs/promises'
 import { relative, isAbsolute, extname } from 'node:path'
 import { Client } from 'pg'
-import nextEnv from '@next/env'
+import { loadEnvConfig } from '@next/env'
 import { databaseConnection } from '../lib/database-connection'
 import { readNrcesPackage } from '../lib/medicines/nrces-package'
 import { readJsonCatalog, parseCatalog, normalizeBrandSearch } from '../lib/medicines/brand-preflight'
 import { makeBrand } from '../lib/medicines/brand'
 import { insertBrandsSql } from '../lib/medicines/brand-sql'
+import { datasetBrand } from '../lib/medicines/dataset'
 import { sourceCompositions } from '../lib/medicines/compositions'
 
+let stage = 'input preparation'
 async function main() {
   const args = process.argv.slice(2)
   const source = args.includes('--dataset') ? 'SEED_DATASET' : 'SEED_CDCI'
@@ -30,7 +32,7 @@ async function main() {
     }
   } else {
     const text = await readFile(path,'utf8')
-    const rows = extname(path)==='.json' ? readJsonCatalog(text) : parseCatalog(text,extname(path)==='.csv' ? ',' : '\t')
+    const rows = extname(path).toLowerCase()==='.json' ? readJsonCatalog(text) : parseCatalog(text,extname(path).toLowerCase()==='.csv' ? ',' : '\t')
     inputCount = rows.length
     rows.forEach((row,index) => {
       const flag = row.Is_discontinued?.trim().toLowerCase()
@@ -38,10 +40,7 @@ async function main() {
       const stopped = ['true','1','yes'].includes(flag)
       if (stopped && !args.includes('--include-discontinued')) { discontinued++; return }
       if (!row.id || !row.name || !row.manufacturer_name || !row.type || !row.short_composition1) { rejects.push({record:index+2,reason:'Missing required source fields'}); return }
-      prepared.push(makeBrand({ source,sourceId:row.id,name:row.name,formText:row.type,manufacturer:row.manufacturer_name,
-        compositionText:[row.short_composition1,row.short_composition2].filter(Boolean).join(' and '),packSize:row.pack_size_label,
-        system: row.system==='AYUSH' || row.system==='AYURVEDIC' ? 'AYUSH' : row.system==='ALLOPATHY' ? 'ALLOPATHY' : 'OTHER',
-        isDiscontinued:stopped,discontinuedKnown:true }))
+      prepared.push(datasetBrand(row))
     })
   }
   const unique = new Map<string,ReturnType<typeof makeBrand>>()
@@ -59,17 +58,26 @@ async function main() {
   let inserted = 0, before = 0, after = 0
   if (!dry) {
     if (!args.includes('--license-confirmed')) throw new Error('Use --license-confirmed after owner license review')
-    nextEnv.loadEnvConfig(process.cwd(),false,{info(){},error(){}})
+    stage = 'environment loading'
+    loadEnvConfig(process.cwd(),false,{info(){},error(){}})
+    stage = 'verified TLS client configuration'
     const db = new Client({...databaseConnection(process.env.DIRECT_URL),connectionTimeoutMillis:10000})
+    stage = 'database connection'
     await db.connect()
     try {
+      stage = 'capacity check'
       before = Number((await db.query('SELECT pg_database_size(current_database()) AS bytes')).rows[0].bytes)
       const present = Number((await db.query('SELECT count(*) FROM public."Brand" WHERE source=$1::public."BrandSource"',[source])).rows[0].count)
       if (!present && before+estimated>limit) throw new Error('Estimated capacity exceeds database budget; review catalog subset before import')
+      // A committed batch includes its links/aliases atomically. Skip those IDs
+      // on resume instead of repeating thousands of network calls.
+      const existingIds = new Set((await db.query('SELECT id FROM public."Brand" WHERE source=$1::public."BrandSource"',[source])).rows.map(row=>row.id as string))
       for (let offset=0;offset<brands.length;offset+=400) {
-        const batch = brands.slice(offset,offset+400)
+        const batch = brands.slice(offset,offset+400).filter(brand=>!existingIds.has(brand.id))
+        if (!batch.length) continue
         await db.query('BEGIN')
         try {
+          stage = 'brand batch'
           const result = await db.query(insertBrandsSql,[JSON.stringify(batch)]); inserted += result.rowCount || 0
           const compositionRows = new Map<string,ReturnType<typeof sourceCompositions>[number]>()
           const links: {brandId:string;compositionId:string;order:number}[] = []
@@ -81,20 +89,37 @@ async function main() {
             const alias = aliases.get(brand.id)
             if (alias) aliasRows.push({brandId:brand.id,alias,aliasNormalized:normalizeBrandSearch(alias)})
           }
+          stage = 'composition batch'
           await db.query(`INSERT INTO public."Composition" SELECT * FROM jsonb_to_recordset($1::jsonb) AS x(id text,"genericName" text,"strengthText" text) ON CONFLICT DO NOTHING`,[JSON.stringify([...compositionRows.values()])])
+          stage = 'composition links'
           await db.query(`INSERT INTO public."BrandComposition" SELECT * FROM jsonb_to_recordset($1::jsonb) AS x("brandId" text,"compositionId" text,"order" int) ON CONFLICT DO NOTHING`,[JSON.stringify(links)])
+          stage = 'alias batch'
           await db.query(`INSERT INTO public."BrandAlias" SELECT * FROM jsonb_to_recordset($1::jsonb) AS x("brandId" text,alias text,"aliasNormalized" text) ON CONFLICT DO NOTHING`,[JSON.stringify(aliasRows)])
           if (offset%4000===0 && Number((await db.query('SELECT pg_database_size(current_database()) AS bytes')).rows[0].bytes)>limit) throw new Error('Capacity budget reached; resume after choosing subset or capacity')
           await db.query('COMMIT')
+          if (offset%10000===0) console.log(`Catalog progress: ${Math.min(offset+batch.length,brands.length)}/${brands.length} processed; ${inserted} inserted.`)
         } catch(error) { await db.query('ROLLBACK'); throw error }
       }
+      stage = 'legacy composition links'
+      const legacy = (await db.query(`SELECT id,"compositionText","formText" FROM public."Brand" WHERE source='LEGACY'`)).rows
+      const components = new Map<string,ReturnType<typeof sourceCompositions>[number]>()
+      const legacyLinks: {brandId:string;compositionId:string;order:number}[] = []
+      for (const brand of legacy) sourceCompositions(brand.compositionText,brand.formText).forEach((component,order) => {
+        components.set(component.id,component); legacyLinks.push({brandId:brand.id,compositionId:component.id,order})
+      })
+      await db.query('BEGIN')
+      try {
+        await db.query(`INSERT INTO public."Composition" SELECT * FROM jsonb_to_recordset($1::jsonb) AS x(id text,"genericName" text,"strengthText" text) ON CONFLICT DO NOTHING`,[JSON.stringify([...components.values()])])
+        await db.query(`INSERT INTO public."BrandComposition" SELECT * FROM jsonb_to_recordset($1::jsonb) AS x("brandId" text,"compositionId" text,"order" int) ON CONFLICT DO NOTHING`,[JSON.stringify(legacyLinks)])
+        await db.query('COMMIT')
+      } catch(error) { await db.query('ROLLBACK'); throw error }
       await db.query('ANALYZE public."Brand"'); await db.query('ANALYZE public."BrandAlias"')
       after = Number((await db.query('SELECT pg_database_size(current_database()) AS bytes')).rows[0].bytes)
     } finally { await db.end() }
   }
   await writeFile('docs/IMPORT_REPORT.md',[
     '# N1 catalog import report','', `Mode: ${dry ? 'DRY RUN — no DB connection/writes' : 'DATABASE IMPORT'}. Source: ${source}.`,
-    'Attribution: NRCeS / C-DAC, Pune, CC BY 4.0 with supplied SNOMED/India conditions; owner confirmed applicable Affiliate License. Source entries normalized and linked for search. No clinical validation claimed.','',
+    source==='SEED_CDCI' ? 'Attribution: NRCeS / C-DAC, Pune, CC BY 4.0 with supplied SNOMED/India conditions; owner confirmed applicable Affiliate License. Source entries normalized and linked for search. No clinical validation claimed.' : 'Owner-supplied dataset. Operator asserted license confirmation; no NRCeS or CC license is presumed. No clinical validation claimed.', '',
     `Input: ${inputCount}; prepared: ${prepared.length}; unique eligible: ${brands.length}; duplicate presentations merged: ${prepared.length-unique.size-rejects.filter(r=>r.reason.includes('bounds')).length}; discontinued skipped: ${discontinued}.`,
     `Rejected/quarantined: ${rejects.length}; inserted this run: ${inserted}; already present on rerun: ${dry ? 'not measured' : brands.length-inserted}.`,
     `Conservative preflight estimate (row JSON × 3): ${estimated} bytes. DB bytes before: ${before}; after: ${after}; added: ${after-before}.`,
@@ -104,4 +129,4 @@ async function main() {
   ].join('\n'))
   console.log(`Catalog ${dry?'preflight':'import'} complete: ${brands.length} unique eligible; ${inserted} inserted. See docs/IMPORT_REPORT.md.`)
 }
-main().catch(() => { console.error('Brand import stopped. Check local files, license flag, migration state and capacity budget. Committed batches are safe to resume; raw data and database exceptions are not logged.'); process.exitCode=1 })
+main().catch((error: unknown) => { const code = error && typeof error==='object' && 'code' in error && typeof error.code==='string' && /^[A-Z0-9]{5}$/.test(error.code) ? error.code : 'none'; const kind = error instanceof Error && ['Error','TypeError','ReferenceError','RangeError','SyntaxError'].includes(error.name) ? error.name : 'Error'; console.error(`Brand import stopped during ${stage}; ${kind}, database code ${code}. Committed batches are safe to resume. Raw data, exception messages and credentials are not logged.`); process.exitCode=1 })

@@ -147,3 +147,41 @@ N0 application record: applied on November 7, 2026. Migration status reports all
 13 tracked migrations applied. Verified live metadata: manufacturer column exists,
 presentation index unique/valid, zero duplicate groups, 202 allopathic and 65
 Ayurvedic rows retained. No patient records were read or changed in these checks.
+
+## V2 N1: brand catalog
+
+Owner confirmed an applicable NRCeS/SNOMED Affiliate License. Raw package stays
+ignored under data/brands/nrces. Migration 202611070006_brand_catalog adds private
+catalog/preferences tables, source-backed legacy rows and query indexes/functions.
+It does not drop Medicine, modify clinical records or alter existing auth policies.
+Fourteen tracked migrations are applied on the hosted project.
+
+```sh
+npx prisma generate
+node scripts/migrate-verified.mjs deploy
+# Fresh database only: seed legacy presentations after migration, before import.
+# node --import tsx prisma/seed.ts
+node --import tsx scripts/import-brands.ts --dry-run
+node --import tsx scripts/import-brands.ts --license-confirmed
+node --import tsx scripts/verify-brand-catalog.ts
+node --import tsx scripts/coverage-check.ts data/brands/parents_top100.csv
+```
+
+Optional final doctor-id selects preference ranking for the coverage command;
+default is the first active doctor. No doctor password or session cookie is needed
+for this owner-operated local diagnostic; app routes still require the real active
+doctor session. The diagnostic reads catalog/preference metadata, not patients.
+
+The chosen package imported 93,897 records; 14 source rows were quarantined. A
+rerun inserted zero duplicates. The original 267 Medicine rows remain. Original
+import added 215,851,008 database bytes; final totals are in IMPORT_REPORT.md.
+The capacity guard defaults to 450MiB and may be overridden with an exported
+NIVAA_IMPORT_MAX_DB_MIB only after checking the actual plan/headroom. It is not
+an automatic provider entitlement check. A larger source can require a curated
+subset or capacity decision; the script never drops records to meet a budget.
+
+Brand_search_tokens_idx and the earlier Medicine presentation identity index are
+SQL-managed expression indexes. Preserve them in future migration/introspection
+work. Keep all source migrations immutable after application. Resume was tested
+against the same package; do not treat a changed source release as an approved
+in-place overwrite of current catalog entries. Original Rx snapshots remain stable.

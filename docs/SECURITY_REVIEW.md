@@ -26,6 +26,23 @@ H1/H2/H3 and provider/retention/device follow-ups remain open. No backup restore
 plan upgrade, privilege reduction, external log-retention verification or new
 clinical validation was performed in N0.
 
+## V2 N1 targeted checks
+
+The owner confirmed an applicable source license. Five new catalog/preferences
+tables extend server-only RLS/revoked browser access; existing security migrations,
+auth and middleware remain unchanged. Search/learning/favorite actions derive
+Doctor identity from getCurrentDoctor; all preference joins/writes bind that ID.
+Search returns private no-store responses, and API failures contain fixed errors.
+SQL values are bound parameters. New catalog functions use invoker permissions,
+not SECURITY DEFINER. Source data is a shared catalog; preferences stay private.
+
+Tests cover new-table denial, cross-doctor preferences, malformed input, duplicate
+creation/rollback and raw-error redaction, alongside existing patient/PDF/Storage
+checks. Hosted metadata verified RLS/SELECT denial on all five tables. No broad
+API grants or old security-policy changes were introduced. Runtime remains the
+existing administrative role (H2); backup/restore and prior operational findings
+remain open. This is a scoped N1 review, not a fresh full-repository certification.
+
 ## Findings ranked by current severity
 
 | ID / severity | Evidence and impact | Concrete follow-up |

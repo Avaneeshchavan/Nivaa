@@ -15,6 +15,7 @@ const prisma = {
   if(fail)throw new Error('Synthetic private failure')
   const {doctorId,brandId}=where.doctorId_brandId
   await db.query(`INSERT INTO "DoctorMedicinePref" ("doctorId","brandId","isFavorite") VALUES ($1,$2,true) ON CONFLICT ("doctorId","brandId") DO UPDATE SET "isFavorite"=true`,[doctorId,brandId])
+  return (await db.query('SELECT * FROM \"DoctorMedicinePref\" WHERE \"doctorId\"=$1 AND \"brandId\"=$2',[doctorId,brandId])).rows[0]
  }}
 }
 let queue=Promise.resolve()
@@ -34,7 +35,7 @@ vm.runInNewContext(ts.transpileModule(fs.readFileSync('actions/medicines.actions
  const create=actions.createCustomMedicine
  const input={name:'  Synthetic   brand ',strength:' 4   mg ',form:'tablet',manufacturer:' Fixture   company ',generic:' Synthetic composition '}
  const first=await create(input)
- assert.equal(first.alreadyExists,false);assert.equal(first.medicine.name,'Synthetic brand 4 mg');assert.equal(first.medicine.manufacturer,'Fixture company')
+ assert.equal(first.alreadyExists,false);assert.equal(first.medicine.isFavorite,true);assert.equal(first.medicine.name,'Synthetic brand 4 mg');assert.equal(first.medicine.manufacturer,'Fixture company')
  for(const name of ['synthetic brand','SYNTHETIC-BRAND','Ｓｙｎｔｈｅｔｉｃ brand','Synthetic—brand']){
   const duplicate=await create({...input,name,manufacturer:'Must not overwrite'})
   assert.equal(duplicate.alreadyExists,true);assert.equal(duplicate.medicine.id,first.medicine.id);assert.equal(duplicate.medicine.manufacturer,'Fixture company')
