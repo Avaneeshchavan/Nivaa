@@ -67,7 +67,17 @@ export const useRxBuilderStore = create<RxBuilderState>((set) => ({
   updateMedicine: (id, medicineUpdate) =>
     set((state) => ({
       medicines: state.medicines.map((m) => 
-        m.id === id ? { ...m, ...medicineUpdate } : m
+        m.id === id ? {
+          ...m,
+          // A free-text rename is no longer the selected catalog presentation.
+          // Keep clinical instructions, but never attach the old composition
+          // or company to a different medicine name.
+          ...(medicineUpdate.name !== undefined && medicineUpdate.name !== m.name ? {
+            brandId: undefined, manufacturer: undefined, strengthText: undefined,
+            composition: undefined, generic: undefined, form: undefined,
+          } : {}),
+          ...medicineUpdate,
+        } : m
       )
     })),
     
