@@ -2,12 +2,12 @@
 
 Selected source: **NRCeS Common Drug Codes for India — Flat Files Package**, confirmed by the owner.
 
-Status: **Package and License.txt not yet supplied; license UNVERIFIED; no production import performed.**
+Status: **Supplied package and License.txt inspected; deployment license applicability needs owner review; no production import performed.**
 Checked November 7, 2026. Source selection remains the owner's decision.
 
 | Candidate | Evidence | License / implementation status |
 | --- | --- | --- |
-| NRCeS Common Drug Codes for India, Flat Files Package | [Official national releases](https://www.nrces.in/services/national-releases), [download resources](https://www.nrces.in/resources). The official description says the package contains linked TSV masters for substances, brands, suppliers, forms and generic medicines. | **UNVERIFIED**: the applicable terms are inside the package's License.txt, which has not been supplied or reviewed. Availability does not establish unrestricted reuse. This is distinct from the terminology-integrated/SNOMED package. Exact file headers and joins must be inspected from the chosen release. |
+| NRCeS Common Drug Codes for India, Flat Files Package | [Official national releases](https://www.nrces.in/services/national-releases), [download resources](https://www.nrces.in/resources). The official description says the package contains linked TSV masters for substances, brands, suppliers, forms and generic medicines. | **TEXT VERIFIED from the supplied License.txt**: CC BY 4.0, with additional conditions for included SNOMED International identifiers/terms and redistribution/derivative use within India. Applicability of an Affiliate License/sublicense for this deployment remains unconfirmed. The exact supplied headers and joins are now implemented in the offline package inspector. |
 | “Indian Medicine Dataset” mentioned in the V2 prompt | The prompt describes columns including id, name, manufacturer_name, type, pack_size_label and short_composition1/2, but identifies no exact repository, release or license file. | **UNVERIFIED**. Do not choose an arbitrary similarly named repository. Supply the exact source URL, release, provenance and license before importing. Do not scrape a commercial pharmacy site or assume a public download implies reuse rights. |
 | Clinic-owned formulary | A list entered by the doctors from their own formulary, with brand/form/strength/company/composition explicitly reviewed by them. | Source ownership and any third-party restrictions still need confirmation. No external compositions or dosage guidance will be invented. Start with the actual 100 frequently used brands to measure coverage. |
 
@@ -37,3 +37,31 @@ The implemented preflight checker only inspects individual local CSV/TSV/JSON
 files. An NRCeS master with unfamiliar headers is reported UNMAPPED, not imported
 as if it were a flattened pharmacy dataset. The full relational importer, brand
 schema, search ranking, preferences and UI integration are still N1 work.
+
+## Supplied package and specific owner review
+
+Downloaded ZIP SHA-256:
+`aebd30ac95d73accf573c86fd4dae1dc90eff03ae0fbcd312bc761011e88270a`.
+Extracted files, including original license, remain under ignored data/brands/nrces/.
+The ZIP entry timestamps span August/September 2026; they do not establish an
+independently verified published release identifier.
+
+The supplied license names Creative Commons Attribution 4.0, then separately
+states that use of included SNOMED International identifiers/terms is governed by
+the relevant Affiliate License clauses. It allows redistribution and derivative
+products/services within India and disclaims content accuracy/completeness.
+Do not summarize these combined terms as unrestricted worldwide CC reuse.
+
+NRCeS's [official FAQ](https://www.nrces.in/faqs) says an Affiliate License is
+required for SNOMED CT use in India even though use within India is free. It also
+describes deployment sublicensing. The [official licensing steps](https://www.nrces.in/standards/snomed-ct)
+direct applicants to MLDS. Confirm whether the developer/clinic already has the
+applicable license and deployment coverage, or complete the required registration
+and agreements personally. This implementation has not accepted an agreement or
+registered an account for the owner. Ask NRCeS if the flat-file application's
+specific use or hosting requires clarification. This is an unresolved deployment
+input, not a claim that the package's CC license is invalid.
+
+The source has no discontinued flag. Its uniformly UNKNOWN marketing-license
+status is not a discontinued status. Source compositions/forms are retained;
+missing linked rows are quarantined. No source clinical instructions were imported.

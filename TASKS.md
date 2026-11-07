@@ -51,6 +51,7 @@ N1 has started on v2/brand-catalog. N2–N7 remain unstarted; see docs/N1_CHECKP
 ## V2 — N1 brand catalog
 - [x] N1 preparation: source investigation, ignored local input directory, structural file preflight and synthetic tests. See docs/N1_CHECKPOINT.md.
 - [x] N1 source choice: owner selected NRCeS Common Drug Codes Flat Files.
-- [ ] N1 owner inputs: download the NRCeS package with License.txt; provide the actual top-100 brands.
+- [x] N1 package input: supplied ZIP and License.txt inspected; actual linked TSV loader and 200-row tests complete. See docs/IMPORT_REPORT.md.
+- [ ] N1 owner review: confirm applicable SNOMED license/deployment coverage; provide the actual top-100 brands.
 - [ ] N1 implementation: brand/composition/preferences schema, migration, importer, ranked search, usage learning, picker, coverage and scale tests.
 - [ ] N2 prescription-builder prompt: start after the N1 review checkpoint and dependencies are resolved.

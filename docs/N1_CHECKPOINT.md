@@ -1,60 +1,55 @@
-# N1 review checkpoint: source selection and import readiness
+# N1 checkpoint: real NRCeS package inspected
 
-Branch: v2/brand-catalog, based on completed N0 at d614a4c.
+Branch: v2/brand-catalog. N1 is in progress, not complete. N2 is unstarted.
 
-N1 is **in progress, not complete**. N2 has not been started. The user requested
-prompt-by-prompt tracking and a pause when review is useful. This is the first N1
-review checkpoint: the chosen dataset/package and its reuse terms need review.
-The V2 prompt explicitly assigns source selection/download to the owner.
+The owner supplied CommonDrugCodesForIndia_FlatFilePackage.zip in Downloads.
+The archive was safely extracted into ignored data/brands/nrces/ with original
+License.txt/README retained. Raw files are not pushed to GitHub.
 
-## Completed in this checkpoint
+## Completed
 
-- Read AGENTS.md, TASKS.md, V2_AUDIT.md, model, medicine route, seed and N1/N2 prompts.
-- Installed Next docs path remains absent; official Next 15 route documentation
-  was consulted before implementation.
-- Checked official NRCeS documentation: the flat-file package is linked TSV
-  masters, with terms supplied inside License.txt. The exact release headers and
-  license have not been provided; do not invent a flattened CDCI column mapping.
-- Added an environment-free local preflight command for CSV, TSV/TXT and JSON.
-  Handles BOM, quoting, escaped delimiters and multiline values. Rejects ragged
-  records, duplicate headers, malformed quoting, nested JSON and outside-folder
-  paths. File limit 128 MiB; raw data stays ignored in Git.
-- Added structural readiness counts for the pharmacy-dataset layout specified in
-  N1: skip discontinued items, flag missing company/composition/form, identify
-  exact duplicate candidates, retain decimal-strength distinctions. No clinical
-  equivalence or dose is inferred. Unknown layouts are explicitly UNMAPPED.
-- Added owner download instructions and a report which distinguishes readiness
-  from production import. No catalog/package was downloaded or scraped.
+- Source/header inspection of all seven master files and the actual license.
+- Dedicated plain-TSV loader supporting the package's terminal-tab convention,
+  literal quotation marks, string identifiers, required headers and duplicate-ID
+  rejection. General CSV parsing is deliberately not used to reinterpret NRCeS.
+- Exact Brand -> Product/Supplier/Generic -> DrugForm joins. Source company,
+  composition text, form and update date are preserved. No dosing invented.
+- 93,911 source brand rows: 2 malformed rows quarantined; 12 otherwise valid
+  brands with missing generic links quarantined; 93,897 joined brands remain.
+- Generated docs/IMPORT_REPORT.md with inventory, row-level quarantine reasons
+  and source query presence. Ondem/MD, Aciloc 300 and Dolo 650 exist. Uprise D3 has
+  only an injection presentation in this package. No oral product was inferred.
+- Tests cover 200 synthetic joined brands, broken references, malformed rows,
+  duplicate IDs, lossless long identifiers and preserved source status.
+- Inspected package has UNKNOWN marketing-license status on every brand and no
+  discontinued field. These values are not treated as proof of current approval
+  or as a discontinued flag.
+
+## Owner checkpoint before deployment
+
+The package's license identifies CC BY 4.0 plus SNOMED-related and India-use
+conditions. NRCeS's official FAQ says SNOMED use requires an Affiliate License
+even when free within India. Confirm existing developer/clinic license and
+sublicense coverage or complete the registration/agreements yourself. Specific
+sources and instructions are in docs/MED_DATA_SOURCES.md. No agreement has been
+accepted on the owner's behalf. This review needs resolution before publishing
+the imported terminology through the app.
 
 ## Remaining N1 scope
 
-Brand/Composition/Alias/DoctorMedicinePref models and additive migration; legacy
-catalog migration; resumable relational import with license provenance; actual
-brand/composition/company search and ranked trigram indexes; empty-query
-favorites/recents; usage/default learning; snapshot compatibility; picker
-integration; 200-row search-ranking tests; top-100 coverage command; EXPLAIN and
-realistic size/latency measurements. These are not represented as completed by the
-preflight tests. N2 depends on these interfaces and remains pending.
-
-## Review needed
-
-The owner selected NRCeS Flat Files. A targeted Downloads search found no matching
-CDCI/DrugCodes/BrandMaster package or License.txt. Supply the downloaded ZIP or
-local extracted package including License.txt. Leaving the ZIP in Downloads and
-providing its filename is sufficient; Codex can extract it into the ignored input
-directory. For another
-dataset, identify the exact source/release and license. Also gather the parents'
-actual top-100 brands. See MED_DATA_SOURCES.md for click-by-click download steps.
-
-No runtime code, schema, authentication/security policy, environment file or live
-database was changed in this checkpoint. It does not change the deployed N0 app.
-No new dependency was added. This branch is a reviewable preparation checkpoint;
-it is not a production rollout of N1.
+Brand/Composition/Alias/DoctorMedicinePref models and additive private migration;
+legacy preservation; resumable importer; ranked trigram database search; company/
+composition search integration; favorites/usage/defaults; Rx snapshots and picker;
+source attribution in deployed UI; top-100 coverage; EXPLAIN and scale tests.
+The offline query inventory is not ranked-search or latency acceptance evidence.
+No live database/schema/runtime change or N1 deployment has occurred. N0 remains
+live. No dependency or .env changes were made.
 
 ## Verification
 
-- node scripts/check-brand-preflight.cjs: passed (200 synthetic records, formats,
-  malformed inputs, quoted fields, discontinued flags and decimal distinctions).
+- node scripts/check-nrces-package.cjs: passed, including 200 joined fixture rows.
+- node scripts/check-brand-preflight.cjs: passed, including CLI integration.
+- node --import tsx scripts/inspect-nrces.ts: passed on the supplied real package.
 - npx tsc --noEmit: passed.
-- npm run build: passed, including lint/type validation.
-- Actual CLI integration: passed with 200 synthetic rows; report omits raw values, outside-folder and malformed input are rejected, previous report is preserved on failure. Test fixtures were removed.
+- npm run build: passed, including lint/type checks.
+- Raw package ignored; git diff --check passed.

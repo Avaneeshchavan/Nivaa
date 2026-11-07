@@ -11,14 +11,14 @@ Local inspection (no database connection, import, scraping or environment load):
 
 ```sh
 node --import tsx scripts/preflight-brands.ts data/brands/catalog.csv
-node --import tsx scripts/preflight-brands.ts data/brands/nrces/BrandMaster.txt
+node --import tsx scripts/inspect-nrces.ts data/brands/nrces
 ```
 
 Use the actual file name. CSV uses commas; .tsv/.txt uses tabs; JSON must be an
 array of flat records. Files must resolve inside this folder, including symlinks,
 and be at most 128 MiB. The report is docs/IMPORT_REPORT.md and omits raw contents.
 The named pharmacy-dataset layout is recognized for structural readiness only.
-Unknown layouts are explicitly UNMAPPED; joined NRCeS import is not implemented.
+Unknown generic-checker layouts are UNMAPPED or rejected as malformed. The dedicated inspect-nrces command reads the actual linked NRCeS TSV tables, quarantines bad rows and reports joined source inventory. It performs no database import.
 The tool skips discontinued rows in its counts, flags incomplete rows and marks
 exact presentation duplicate candidates without clinical merging. It ignores
 price. This is a review checkpoint within N1, not a completed N1 importer.
