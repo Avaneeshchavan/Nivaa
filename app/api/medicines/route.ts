@@ -30,8 +30,8 @@ export async function GET(request: Request) {
     })
 
     const response = NextResponse.json(medicines)
-    // Cache for 5 minutes since medicine DB doesn't change often
-    response.headers.set('Cache-Control', 'private, max-age=300')
+    // Custom entries must be searchable immediately, including previous misses.
+    response.headers.set('Cache-Control', 'private, no-store')
     return response
   } catch (error) {
     console.error('Medicine search failed')

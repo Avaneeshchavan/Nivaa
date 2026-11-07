@@ -14,7 +14,7 @@ import {
 import { useRxBuilderStore, type RxMedicine } from '@/stores/rxBuilderStore'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { createCustomMedicine } from '@/actions/medicines.actions'
+import CustomMedicineForm from './CustomMedicineForm'
 import type { Medicine } from '@/lib/generated/prisma/client'
 
 export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxMedicine) => void } = {}) {
@@ -24,9 +24,8 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
   const [loading, setLoading] = useState(false)
   const [selectedMed, setSelectedMed] = useState<Medicine | null>(null)
 
-  const [strength, setStrength] = useState('')
-  const [form, setForm] = useState('')
-  const [creating, setCreating] = useState(false)
+  const [customName, setCustomName] = useState<string | null>(null)
+  const [notice, setNotice] = useState('')
   const [error, setError] = useState<string | null>(null)
   const searchVersion = useRef(0)
 
@@ -53,25 +52,10 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
   const handleSearch = (value: string) => {
     setSearch(value)
     setError(null)
+    setNotice('')
     setMedicines([])
     setLoading(Boolean(value.trim()))
     fetchMedicines(value.trim(), ++searchVersion.current, system)
-  }
-
-  const handleCreate = async () => {
-    if (creating || !search.trim()) return
-    setCreating(true)
-    setError(null)
-    try {
-      const medicine = await createCustomMedicine({ name: search, strength, form, system: system === 'AYURVEDIC' ? 'AYURVEDIC' : 'ALLOPATHY' })
-      chooseMedicine(medicine)
-      setStrength('')
-      setForm('')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create medicine')
-    } finally {
-      setCreating(false)
-    }
   }
 
   // Inline form state
@@ -105,6 +89,7 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
 
     // Reset form
     setSelectedMed(null)
+    setNotice('')
     setSearch('')
     searchVersion.current += 1
     setMedicines([])
@@ -116,7 +101,7 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
 
   return (
     <div className="space-y-4">
-      {!selectedMed && <div role="group" aria-label="Optional medicine filter" className="flex flex-wrap gap-2">
+      {!selectedMed && customName === null && <div role="group" aria-label="Optional medicine filter" className="flex flex-wrap gap-2">
         {([['ALL', 'All medicines'], ['ALLOPATHY', 'Allopathy'], ['AYURVEDIC', 'AYUSH']] as const).map(([category, label]) => (
           <Button key={category} type="button" size="sm" variant={system === category ? 'default' : 'outline'}
             className="min-h-11 rounded-full" aria-pressed={system === category}
@@ -129,7 +114,13 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
         ))}
       </div>}
 
-      {!selectedMed ? (
+      {notice && <p role="status" className="rounded-lg border bg-secondary p-3 text-sm font-medium">{notice}</p>}
+      {customName !== null ? <CustomMedicineForm initialName={customName} initialSystem={system === 'AYURVEDIC' ? 'AYURVEDIC' : 'ALLOPATHY'}
+        onCancel={() => setCustomName(null)} onCreated={({ medicine, alreadyExists }) => {
+          setCustomName(null)
+          setNotice(alreadyExists ? `Already exists: ${medicine.name}` : `Added: ${medicine.name}`)
+          chooseMedicine(medicine)
+        }} /> : !selectedMed ? (
         <Command shouldFilter={false} className="rounded-xl border border-input bg-card">
           <CommandInput
             aria-label="Search for a medicine"
@@ -156,9 +147,9 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
                   >
                     <div className="flex flex-col">
                       <span className="font-medium">{med.name} <span className="inline-block rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">{med.system === 'AYURVEDIC' ? 'AYUSH' : 'Allopathy'}</span></span>
-                      {(med.generic || med.form) && (
+                      {(med.generic || med.form || med.manufacturer) && (
                         <span className="text-sm text-muted-foreground">
-                          {med.generic} {med.form ? `• ${med.form}` : ''}
+                          {[med.generic, med.form, med.manufacturer].filter(Boolean).join(' · ')}
                         </span>
                       )}
                     </div>
@@ -167,13 +158,9 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
               </CommandGroup>
             )}
             {search.trim() && (
-              <CommandGroup heading={system === 'AYURVEDIC' ? 'Custom Ayurvedic medicine' : 'Custom allopathic medicine'}>
-                <div className="grid grid-cols-2 gap-2 px-2 pb-2">
-                  <Input aria-label="Custom medicine strength (optional)" placeholder="Strength (optional)" value={strength} onChange={(e) => setStrength(e.target.value)} maxLength={80} className="h-11" />
-                  <Input aria-label="Custom medicine form (optional)" placeholder="Form (optional)" value={form} onChange={(e) => setForm(e.target.value)} maxLength={80} className="h-11" />
-                </div>
-                <CommandItem value="create-custom-medicine" onSelect={handleCreate} disabled={creating} className="min-h-11 py-3 cursor-pointer">
-                  {creating ? 'Creating medicine...' : `Add '${search.trim()}' as custom medicine`}
+              <CommandGroup heading="Not found?">
+                <CommandItem value="create-custom-medicine" onSelect={() => setCustomName(search.trim())} className="min-h-11 py-3 cursor-pointer">
+                  {`Add '${search.trim()}' as custom medicine`}
                 </CommandItem>
               </CommandGroup>
             )}
@@ -189,7 +176,7 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
               <p className="font-semibold text-primary">{selectedMed.name}</p>
               <p className="text-sm text-muted-foreground">{selectedMed.generic}</p>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setSelectedMed(null)} className="min-h-11">
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setSelectedMed(null); setNotice('') }} className="min-h-11">
               Change
             </Button>
           </div>

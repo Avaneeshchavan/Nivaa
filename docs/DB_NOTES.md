@@ -109,3 +109,36 @@ The Ayurvedic-only seed ran twice. The database contains 202 allopathic and 65 A
 ## November 7 security operations
 
 Applied `202611070003_security_operations` and `202611070004_storage_membership` over the verified migration bridge. They add server-only RateLimit and append-only AuditLog tables, Doctor.active, and restrictive Storage membership checks. Twelve migrations are now applied. Runtime/seed PostgreSQL connections require verified TLS using the tracked public Supabase CA. Use `node scripts/migrate-verified.mjs status` or `deploy` on this machine because the native migration client's direct CA verification failed. See DEPLOY.md and BACKUPS.md.
+
+## V2 N0: custom medicine details and duplicate prevention
+
+`202611070005_custom_medicine_identity` adds the nullable manufacturer field and
+an immutable text-normalization function plus a unique expression index on name
+and form. Existing IDs, display text, generic values, systems and prescription
+snapshots remain intact. Strength stays in the display name for compatibility.
+Case, collapsed spaces, Unicode compatibility characters and hyphen separators
+compare alike. Decimal points, slashes, different strengths and different forms
+remain distinct; this is presentation deduplication, not clinical equivalence.
+Existing matches are returned unchanged with “Already exists” feedback.
+
+The migration is transactional and aborts on pre-existing normalized collisions;
+it never merges or deletes medicine records. Review such collisions with the
+doctors before rerunning. Do not reset the database or edit an applied migration.
+Prisma cannot express this functional unique index in its model; retain the
+tracked SQL index during future migration generation/introspection.
+
+Run from the repository after supplying existing environment configuration:
+
+```sh
+npx prisma generate
+node scripts/migrate-verified.mjs status
+node scripts/migrate-verified.mjs deploy
+node scripts/migrate-verified.mjs status
+node scripts/check-custom-medicine.cjs
+node scripts/check-medicine-picker.cjs
+```
+
+The existing verified-TLS migration helper is unchanged in N0. Simplifying it is
+N7 work. This migration adds catalog metadata only; it changes no authentication,
+RLS, grants, security policies, patient tables or prescription data. N1 still
+needs a chosen, licensed brand dataset; N0 does not import any brand data.

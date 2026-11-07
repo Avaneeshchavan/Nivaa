@@ -104,11 +104,13 @@ model Medicine {
   name      String
   system    String   @default("ALLOPATHY")
   generic   String?
+  manufacturer String?
   form      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Medicine_name_trgm_idx")
+  // Presentation uniqueness is a SQL expression index in 202611070005.
   @@index([generic(ops: raw("gin_trgm_ops"))], type: Gin, map: "Medicine_generic_trgm_idx")
 }
 
