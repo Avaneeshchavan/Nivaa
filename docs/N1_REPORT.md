@@ -81,4 +81,21 @@ budget, commit atomic batches and preserve existing data. A changed future sourc
 release needs a reviewed update plan; resume/idempotence was tested on this exact
 package. Do not reset/drop the database or modify an applied migration.
 
-Production release details and HTTP smoke results are added after deployment.
+Final production release: November 7, 2026, application commit `e1c3a0a` on
+`v2/brand-catalog`, pushed to Avaneeshchavan/Nivaa. Deployment
+`dpl_EbVUEBABRytDPYnbsjmUUZCJMnvJ` is Ready at
+https://nivaa-kohl.vercel.app (immutable deployment
+https://nivaa-prf8ejyqw-avaneeshchavans-projects.vercel.app).
+Vercel inspection confirmed `bom1` (Mumbai) functions. The final snapshot-name
+correction passed its regression and production build before rollout.
+
+Post-release verification: all 15 public/anonymous smoke checks and eight explicit
+redirect checks passed on the final alias. Signed-in browser/device acceptance
+remains unverified for the tooling limitation above. The temporary local server
+was stopped. Release used only committed source via Git archive, excluding all
+.env files and ignored raw catalog files. Existing account/project/environment
+settings were reused; no secrets, dependencies or provider plans changed.
+
+A final documentation-only commit records this deployment; it requires no new
+application deployment. N1 implementation is complete. N2 was not started.
+

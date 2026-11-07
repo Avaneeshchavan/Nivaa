@@ -8,8 +8,8 @@
 - [x] 1.3 Sidebar: fix /templates 404 (create a /templates page reusing the settings template manager OR repoint).
 - [x] 1.4 Patient history "View Rx": link to /api/prescriptions/[id]/pdf (target _blank); handle visits with no Rx.
 - [x] 1.5 MedicineAutocomplete: allow adding a custom medicine when no match; persist it to Medicine table.
-- [x] 1.6 prisma/seed.ts: 150+ common Indian generic/brand medicines (antibiotics, analgesics, antipyretics, antihypertensives, antidiabetics, antacids, antihistamines, cough/cold, vitamins) with strength+form. Add `prisma db seed` config. List any entry you're unsure of in docs/MED_REVIEW.md for the doctor to verify (do not guess dosages). (Live catalog verified at 267 presentations. Authenticated HTTP checks remain a device step.)
-- [x] 1.7 package.json "postinstall": "prisma generate". Switch from `db push` to tracked migrations (`prisma migrate dev --name init`). (Thirteen tracked migrations, including the baseline, applied; see docs/DB_NOTES.md.)
+- [x] 1.6 prisma/seed.ts: 150+ common Indian generic/brand medicines (antibiotics, analgesics, antipyretics, antihypertensives, antidiabetics, antacids, antihistamines, cough/cold, vitamins) with strength+form. Add `prisma db seed` config. List any entry you're unsure of in docs/MED_REVIEW.md for the doctor to verify (do not guess dosages). (Legacy catalog retains 267 presentations; N1 adds 93,897 source brands. Doctor/device acceptance remains pending.)
+- [x] 1.7 package.json "postinstall": "prisma generate". Switch from `db push` to tracked migrations (`prisma migrate dev --name init`). (Fourteen tracked migrations, including the baseline, applied; see docs/DB_NOTES.md.)
 - [x] 1.8 Fix StoreInitializer props (clinicName, logoUrl); merge store/ into stores/.
 ## Phase 2 - Doctor-workflow features (Sol, medium)
 - [x] 2.1 Rx history: re-open a past Rx, "Duplicate as new Rx" (big time saver for repeat patients).
@@ -55,4 +55,5 @@ N1 is implemented on v2/brand-catalog; doctor/device acceptance is pending. N2â€
 - [x] N1 license review: owner confirmed applicable Affiliate License.
 - [ ] N1 doctor acceptance: supply the actual top-100 brands and check forms/strengths, favorites/defaults on iPad.
 - [x] N1 implementation: brand/composition/preferences schema, additive migration, real import and zero-insert rerun, ranked search, usage learning, picker, coverage command and scale tests. See docs/N1_REPORT.md.
+- [x] N1 release: final code e1c3a0a deployed to the existing Vercel app; Mumbai placement and production smoke checks verified.
 - [ ] N2 prescription-builder prompt: start after the N1 review checkpoint and dependencies are resolved.
