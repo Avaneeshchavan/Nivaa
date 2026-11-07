@@ -1,6 +1,7 @@
 'use client'
 
 import { useRxAutosave } from './useRxAutosave'
+import { rxSaveReason } from '@/lib/prescriptions/save-state'
 import { reserveScrollSpace } from '@/lib/prescriptions/scroll-reservation'
 import type { RxDraft } from '@/lib/validations/draft.schema'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -84,7 +85,15 @@ export default function RxBuilder({ allowPatientChange, initialPatientId, patien
 
   const autosave = useRxAutosave(draftKey)
 
+  const saveReason = rxSaveReason({ patientId, diagnosis, medicines, notes, handwriting, visit, saving, handwritingBusy })
+  const canSave = saveReason === null
+
   const handleSave = async (print: boolean) => {
+    if (saveReason) {
+      setSaveError(saveReason)
+      if (!visitFormSchema.safeParse(visit).success) setVisitOpen(true)
+      return
+    }
     if (!patientId) {
       setSaveError('Select a patient before saving.')
       return
@@ -126,7 +135,6 @@ export default function RxBuilder({ allowPatientChange, initialPatientId, patien
     }
   }
 
-  const canSave = Boolean(patientId && (diagnosis.trim() || medicines.length || notes.trim() || handwriting.strokes.length || handwriting.photoId) && !saving && !handwritingBusy)
 
   return (
     <div data-rx-builder className="space-y-5">
@@ -235,12 +243,13 @@ export default function RxBuilder({ allowPatientChange, initialPatientId, patien
           <Button variant="outline" onClick={() => setPreviewEnabled(value => !value)}>{previewEnabled ? 'Hide print preview' : 'Show print preview'}</Button>
           <div ref={actionBarRef} className="sticky bottom-0 z-20 space-y-2 rounded-2xl border bg-card p-3 shadow-md">
             {saveError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-900">{saveError}</p>}
+            <p id="rx-save-reason" role="status" className="min-h-5 text-sm font-medium text-muted-foreground">{saveReason || 'Ready to save.'}</p>
             <div className="flex flex-wrap items-center gap-2">
               <label className="flex min-h-11 items-center gap-2 font-medium">Paper
                 <select className="min-h-11 rounded-lg border border-input bg-card px-2" value={paperSize} onChange={event => setPaperSize(event.target.value === 'A4' ? 'A4' : 'A5')}><option>A5</option><option>A4</option></select>
               </label>
-              <Button variant="outline" className="flex-1" onClick={() => handleSave(false)} disabled={!canSave}><Save aria-hidden="true" />Save Rx</Button>
-              <Button className="flex-1" onClick={() => handleSave(true)} disabled={!canSave}><Printer aria-hidden="true" />{saving ? 'Saving…' : 'Save and print'}</Button>
+              <Button variant="outline" className="flex-1" onClick={() => handleSave(false)} disabled={!canSave} aria-describedby="rx-save-reason"><Save aria-hidden="true" />Save Rx</Button>
+              <Button className="flex-1" onClick={() => handleSave(true)} disabled={!canSave} aria-describedby="rx-save-reason"><Printer aria-hidden="true" />{saving ? 'Saving…' : 'Save and print'}</Button>
             </div>
           </div>
         </div>
