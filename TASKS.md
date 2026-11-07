@@ -46,4 +46,10 @@
 - [x] N0.6 Pin compact patient name/age/sex/allergy context in the prescription builder.
 - [ ] N0 device acceptance: rendered checks at 768/820/1024/1180/1366px, Safari keyboard/touch/focus and signed-in flows. Browser integration unavailable; see BLOCKERS.md. Automated checks and source inspection are complete.
 
-N1–N7 have not been started. The next prompt requires the user's instruction.
+N1 has started on v2/brand-catalog. N2–N7 remain unstarted; see docs/N1_CHECKPOINT.md.
+
+## V2 — N1 brand catalog
+- [x] N1 preparation: source investigation, ignored local input directory, structural file preflight and synthetic tests. See docs/N1_CHECKPOINT.md.
+- [ ] N1 owner review: select the source; provide package/license and actual top-100 brands.
+- [ ] N1 implementation: brand/composition/preferences schema, migration, importer, ranked search, usage learning, picker, coverage and scale tests.
+- [ ] N2 prescription-builder prompt: start after the N1 review checkpoint and dependencies are resolved.
