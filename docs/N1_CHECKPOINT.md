@@ -38,8 +38,11 @@ preflight tests. N2 depends on these interfaces and remains pending.
 
 ## Review needed
 
-Choose NRCeS Flat Files, a verified licensed dataset, or a doctor-owned formulary.
-For NRCeS, provide the local extracted package including License.txt. For another
+The owner selected NRCeS Flat Files. A targeted Downloads search found no matching
+CDCI/DrugCodes/BrandMaster package or License.txt. Supply the downloaded ZIP or
+local extracted package including License.txt. Leaving the ZIP in Downloads and
+providing its filename is sufficient; Codex can extract it into the ignored input
+directory. For another
 dataset, identify the exact source/release and license. Also gather the parents'
 actual top-100 brands. See MED_DATA_SOURCES.md for click-by-click download steps.
 

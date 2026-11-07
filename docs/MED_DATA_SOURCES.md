@@ -1,6 +1,8 @@
 # N1 medicine-data source decision
 
-Status: **UNVERIFIED licenses; no production brand import performed.**
+Selected source: **NRCeS Common Drug Codes for India — Flat Files Package**, confirmed by the owner.
+
+Status: **Package and License.txt not yet supplied; license UNVERIFIED; no production import performed.**
 Checked November 7, 2026. Source selection remains the owner's decision.
 
 | Candidate | Evidence | License / implementation status |
