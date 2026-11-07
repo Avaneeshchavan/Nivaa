@@ -57,7 +57,7 @@ All relevant first-party entry points were reviewed. No actual credential was fo
 
 Tests cover anonymous/foreign/mismatched records, drafts, concurrent note changes, switched patients, template ownership/idempotency, real SQL rate-limit atomicity, append-only audit guards, disabled/mismatched Storage identities, bounded requests, encryption authentication and overwrite protection. TypeScript strict checks and the production build pass. New migration/connection behavior was exercised against live metadata and a rolled-back synthetic Prisma transaction.
 
-Browser automation could list the existing clinic tab but attaching failed with `browser.user is unavailable`. Native access to the Codex app is explicitly denied. No authenticated browser, physical iPad/Pencil, printer, full backup/restore, administrator MFA, live cross-doctor Storage/CDN or Vercel log-retention verification is claimed. Deployment smoke tests are anonymous checks and are recorded in the release handoff.
+Browser automation could list the existing clinic tab but attaching failed with `browser.user is unavailable`. Native access to the Codex app is explicitly denied. No authenticated browser, physical iPad/Pencil, printer, full backup/restore, administrator MFA, live cross-doctor Storage/CDN or Vercel log-retention verification is claimed. The production release `96391d0` passed 15 anonymous/header checks and a denied synthetic sign-in with no session cookie. These checks are narrower than authenticated clinical workflow verification. Deployment details are recorded in the release handoff.
 
 ## Historical review
 

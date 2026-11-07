@@ -156,4 +156,14 @@ Evaluate final-save request idempotency after a lost success response, draft per
 
 ## Release verification record
 
-Publication and final anonymous smoke results are filled after the release completes. The code/build/security checks above are complete. Full backup/restore and signed-in/device acceptance remain open as described.
+- Application release commit is `96391d0` on `codex/template-polish-security-handoff`, pushed to the existing Nivaa repository.
+- Vercel deployment `dpl_6sbFwax3bPRnXR6bkKRqRhiMskfY` is READY. Its production alias is `https://nivaa-kohl.vercel.app`. Inspection confirms `bom1` functions. The cloud build completed in approximately 1 minute 9 seconds.
+- `npx tsc --noEmit` and `npm run build` passed for the final source. Admission/session-cleanup, draft, note, patient-switch, query-budget, PDF, Storage, SQL security and backup-crypto regressions passed.
+- `node scripts/smoke-test.mjs https://nivaa-kohl.vercel.app` passed 15 public/anonymous checks, including the security headers and protected search POSTs.
+- The deployed sign-in Server Action was exercised through its public client reference with an unapproved synthetic identity. It returned the generic denial, set no session cookie and loaded without an application error. Real doctor credentials were not used.
+- `node scripts/check-availability.mjs` passed certificate-verified database and Auth availability checks without patient queries. All twelve migrations are applied.
+- Final production dependency audit remains 0 Critical, 17 High, 10 Moderate and 2 Low affected package entries.
+- Sixty-six staged text files were scanned before the release commit, with zero configured credential/private-key matches. Real environment files were absent from the staged release and deployment archive.
+- Full backup/restore and signed-in/device acceptance remain open as described. Browser visual verification was blocked by the integration failure.
+
+The release was deployed directly from this feature branch. Review and deliberately merge the accepted changes into the normal release branch before a later deployment from an older branch. A subsequent handoff/status-only commit records this verification and does not change application runtime code.

@@ -25,7 +25,7 @@ The project is substantially implemented and deployed. The remaining operational
 | 3.4 | Partial | Encrypted database + Storage export tooling and restore runbook exist. Full backup and isolated restore drill require owner-held secrets, PostgreSQL client tools and a recovery destination. This task remains unchecked. |
 | 3.5 | Review completed | Current source/live-metadata/dependency review recorded in SECURITY_REVIEW.md. Historical model-routing labels are planning context. Independent Claude critique is the next external review. |
 | 4.1 | Deployed | Existing Nivaa Vercel project, five app variables, Node 22, explicit Next preset and Mumbai functions. CLI runbook updated. |
-| 4.2 | Implemented | Deployment smoke script and parents' quickstart exist. Release smoke results are recorded in CLAUDE_HANDOFF.md. |
+| 4.2 | Implemented | Deployment smoke script and parents' quickstart exist. Fifteen production smoke checks and a denied synthetic sign-in passed. Results are recorded in CLAUDE_HANDOFF.md. |
 | 5.1 | Deferred optional work | OCR requires a provider decision, consent and clinical review. Paper-note attachment and freehand drawing already exist. |
 | 5.2 | Deferred optional work | PWA/offline drafts follow parent testing. Current drafts need a network connection. |
 

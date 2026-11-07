@@ -1,6 +1,6 @@
 # Nivaa current status — November 7, 2026
 
-Current source is on `codex/template-polish-security-handoff`. The preceding production feature release was `eb19cbb` on `codex/faster-workflows-notes`. The latest release and verification record is in `CLAUDE_HANDOFF.md`.
+Current source is on `codex/template-polish-security-handoff`. The preceding production feature release was `eb19cbb` on `codex/faster-workflows-notes`. Production now runs application release `96391d0`, deployment `dpl_6sbFwax3bPRnXR6bkKRqRhiMskfY`. The final verification record is in `CLAUDE_HANDOFF.md`.
 
 ## Implemented workflows
 
