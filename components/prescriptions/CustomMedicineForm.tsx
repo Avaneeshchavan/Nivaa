@@ -3,7 +3,7 @@
 import { useId, useState } from 'react'
 import { createCustomMedicine } from '@/actions/medicines.actions'
 import { customMedicineSchema, medicineForms } from '@/lib/validations/custom-medicine.schema'
-import type { Medicine } from '@/lib/generated/prisma/client'
+import type { BrandChoice } from '@/lib/medicines/brand'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
@@ -11,7 +11,7 @@ export default function CustomMedicineForm({ initialName, initialSystem, onCance
   initialName: string
   initialSystem: 'ALLOPATHY' | 'AYURVEDIC'
   onCancel: () => void
-  onCreated: (result: { medicine: Medicine; alreadyExists: boolean }) => void
+  onCreated: (result: { medicine: BrandChoice; alreadyExists: boolean }) => void
 }) {
   const id = useId()
   const [values, setValues] = useState({ name: initialName, form: 'tablet' as typeof medicineForms[number], strength: '', manufacturer: '', generic: '', system: initialSystem })

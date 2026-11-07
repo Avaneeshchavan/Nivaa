@@ -1,40 +1,21 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentDoctor } from '@/actions/auth.actions'
+import { brandSearchSql, mapBrandResults, searchArguments } from '@/lib/medicines/search'
+import type { Brand, DoctorMedicinePref } from '@/lib/generated/prisma/client'
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const q = searchParams.get('q')?.trim().slice(0, 100)
-  const system = searchParams.get('system')
-
+  const started = performance.now()
   const doctor = await getCurrentDoctor()
-  if (!doctor) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  if (!q) {
-    return NextResponse.json([])
-  }
-
+  const authMs = performance.now() - started
+  const headers = { 'Cache-Control': 'private, no-store' }
+  if (!doctor) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers })
   try {
-    const medicines = await prisma.medicine.findMany({
-      where: {
-        ...(system === 'AYURVEDIC' || system === 'ALLOPATHY' ? { system } : {}),
-        OR: [
-          { name: { contains: q, mode: 'insensitive' } },
-          { generic: { contains: q, mode: 'insensitive' } },
-        ],
-      },
-      take: 10,
-      orderBy: { name: 'asc' },
-    })
-
-    const response = NextResponse.json(medicines)
-    // Custom entries must be searchable immediately, including previous misses.
-    response.headers.set('Cache-Control', 'private, no-store')
-    return response
+    const params = new URL(request.url).searchParams
+    const rows = await prisma.$queryRawUnsafe<(Brand & { pref: DoctorMedicinePref | null })[]>(brandSearchSql,
+      ...searchArguments(params.get('q') || '', doctor.id, params.get('system') || 'ALL'))
+    return NextResponse.json(mapBrandResults(rows), { headers: { ...headers, 'Server-Timing': `auth;dur=${authMs.toFixed(1)},catalog;dur=${(performance.now()-started-authMs).toFixed(1)}` } })
   } catch {
-    console.error('Medicine search failed')
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    return NextResponse.json({ error: 'Medicine search unavailable' }, { status: 503, headers })
   }
 }

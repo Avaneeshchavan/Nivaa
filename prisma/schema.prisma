@@ -27,6 +27,7 @@ model Doctor {
   phone      String?
   logoUrl    String?
 
+  medicinePreferences DoctorMedicinePref[]
   drafts        RxDraft[]
   patients      Patient[]
   visits        Visit[]
@@ -150,4 +151,107 @@ model RateLimit {
   key             String   @id
   attempts        Int
   windowStartedAt DateTime @default(now())
+}
+
+enum BrandSystem {
+  ALLOPATHY
+  AYUSH
+  OTHER
+}
+enum BrandSource {
+  SEED_CDCI
+  SEED_DATASET
+  DOCTOR_ADDED
+  LEGACY
+}
+enum MedicineForm {
+  TABLET
+  CAPSULE
+  SYRUP
+  SUSPENSION
+  DROPS
+  INJECTION
+  OINTMENT
+  CREAM
+  GEL
+  INHALER
+  POWDER
+  SACHET
+  OTHER
+}
+enum MedicineFood {
+  BEFORE
+  AFTER
+  WITH
+  ANY
+}
+model Brand {
+  id String @id
+  name String
+  nameNormalized String
+  form MedicineForm
+  formText String
+  strengthText String?
+  manufacturer String?
+  packSize String?
+  system BrandSystem @default(OTHER)
+  isDiscontinued Boolean @default(false)
+  discontinuedKnown Boolean @default(false)
+  source BrandSource
+  sourceId String
+  verified Boolean @default(false)
+  createdByDoctorId String?
+  createdAt DateTime @default(now())
+  compositionText String @default("")
+  searchText String
+  identityKey String @unique
+  legacyMedicineId String? @unique
+  compositions BrandComposition[]
+  aliases BrandAlias[]
+  preferences DoctorMedicinePref[]
+  @@unique([source, sourceId])
+  @@index([nameNormalized(ops: raw("text_pattern_ops"))], map: "Brand_name_prefix_idx")
+  @@index([nameNormalized(ops: raw("gin_trgm_ops"))], type: Gin, map: "Brand_name_trgm_idx")
+  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin)
+}
+model Composition {
+  id String @id
+  genericName String
+  strengthText String
+  brands BrandComposition[]
+}
+model BrandComposition {
+  brandId String
+  compositionId String
+  order Int
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  composition Composition @relation(fields: [compositionId], references: [id])
+  @@id([brandId, order])
+  @@index([compositionId])
+}
+model BrandAlias {
+  brandId String
+  alias String
+  aliasNormalized String
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  @@id([brandId, aliasNormalized])
+  @@index([aliasNormalized(ops: raw("gin_trgm_ops"))], type: Gin)
+}
+model DoctorMedicinePref {
+  doctorId String
+  brandId String
+  useCount Int @default(0)
+  lastUsedAt DateTime?
+  isFavorite Boolean @default(false)
+  defaultPattern String?
+  defaultFood MedicineFood?
+  defaultDurationDays Int?
+  defaultInstruction String?
+  defaultDosage String?
+  defaultFrequency String?
+  defaultDuration String?
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+  @@id([doctorId, brandId])
+  @@index([doctorId, isFavorite, lastUsedAt(sort: Desc)])
 }

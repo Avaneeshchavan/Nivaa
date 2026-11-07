@@ -5,6 +5,10 @@ import { create } from 'zustand'
 import { emptyVisitForm, type VisitFormValues } from '@/lib/validations/visit.schema'
 
 export interface RxMedicine {
+  brandId?: string
+  manufacturer?: string | null
+  strengthText?: string | null
+  composition?: string
   id: string
   name: string
   generic?: string | null

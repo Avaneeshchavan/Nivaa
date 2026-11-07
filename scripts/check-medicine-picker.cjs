@@ -13,8 +13,10 @@ function harness(file, mocks = {}) {
     useState(initial) { const index = position++; if (!(index in state)) state[index] = initial; return [state[index], value => { state[index] = typeof value === 'function' ? value(state[index]) : value }] },
     useRef(initial) { const index = position++; return state[index] ||= { current: initial } },
     useId: () => 'custom-fixture',
+    useEffect() {},
   }
   const aliases = {
+    '@/actions/brand-preferences.actions': { rememberMedicineUse: async () => {}, setMedicineFavorite: async () => {} },
     react: hooks, 'use-debounce': { useDebouncedCallback: fn => fn },
     '@/components/ui/button': { Button: 'button' }, '@/components/ui/input': { Input: 'input' },
     '@/components/ui/command': Object.fromEntries(['Command', 'CommandGroup', 'CommandInput', 'CommandItem', 'CommandList'].map(key => [key, key])),
@@ -26,7 +28,7 @@ function harness(file, mocks = {}) {
   }
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX },
-  }).outputText, { exports: exported, require: name => aliases[name] || require(name), crypto, fetch: mocks.fetch })
+  }).outputText, { exports: exported, require: name => aliases[name] || require(name), crypto, AbortController, fetch: mocks.fetch })
   return props => { position = 0; return exported.default(props) }
 }
 function nodes(tree) {
@@ -66,6 +68,16 @@ const text = tree => typeof tree === 'string' || typeof tree === 'number' ? Stri
   find(tree, node => node.type === 'button' && text(node).includes('Add to Prescription')).props.onClick()
   assert.equal(added.length, 1)
   assert.equal(added[0].name, medicine.name)
+  form.props.onCreated({ medicine: { ...medicine, brandId: 'brand-fixture', composition: 'Saved composition', defaults: {
+    defaultDosage: 'Doctor dose', defaultFrequency: 'OD', defaultDuration: '7 days', defaultInstruction: 'Doctor instruction',
+  } }, alreadyExists: false })
+  tree = picker({ onAdd: item => added.push(item) })
+  assert.equal(find(tree, node => node.type === 'input' && node.props.id === 'rx-med-dosage').props.value, 'Doctor dose')
+  assert.equal(find(tree, node => node.type === 'input' && node.props.id === 'rx-med-duration').props.value, '7 days')
+  find(tree, node => node.type === 'button' && text(node).includes('Add to Prescription')).props.onClick()
+  assert.equal(added[1].brandId, 'brand-fixture')
+  assert.equal(added[1].manufacturer, 'Fixture company')
+  assert.equal(added[1].composition, 'Saved composition')
   let submitted
   const customForm = harness('components/prescriptions/CustomMedicineForm.tsx', {
     '@/actions/medicines.actions': { createCustomMedicine: async input => { submitted = input; return { medicine, alreadyExists: true } } },

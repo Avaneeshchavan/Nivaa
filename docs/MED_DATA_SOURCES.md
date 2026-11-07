@@ -2,12 +2,12 @@
 
 Selected source: **NRCeS Common Drug Codes for India — Flat Files Package**, confirmed by the owner.
 
-Status: **Supplied package and License.txt inspected; deployment license applicability needs owner review; no production import performed.**
+Status: **Supplied package and License.txt inspected; owner confirmed an applicable Affiliate License; no production import performed.**
 Checked November 7, 2026. Source selection remains the owner's decision.
 
 | Candidate | Evidence | License / implementation status |
 | --- | --- | --- |
-| NRCeS Common Drug Codes for India, Flat Files Package | [Official national releases](https://www.nrces.in/services/national-releases), [download resources](https://www.nrces.in/resources). The official description says the package contains linked TSV masters for substances, brands, suppliers, forms and generic medicines. | **TEXT VERIFIED from the supplied License.txt**: CC BY 4.0, with additional conditions for included SNOMED International identifiers/terms and redistribution/derivative use within India. Applicability of an Affiliate License/sublicense for this deployment remains unconfirmed. The exact supplied headers and joins are now implemented in the offline package inspector. |
+| NRCeS Common Drug Codes for India, Flat Files Package | [Official national releases](https://www.nrces.in/services/national-releases), [download resources](https://www.nrces.in/resources). The official description says the package contains linked TSV masters for substances, brands, suppliers, forms and generic medicines. | **TEXT VERIFIED from the supplied License.txt**: CC BY 4.0, with additional conditions for included SNOMED International identifiers/terms and redistribution/derivative use within India. The owner confirmed an applicable Affiliate License in this chat; that confirmation is recorded, not independently audited. The exact supplied headers and joins are now implemented in the offline package inspector. |
 | “Indian Medicine Dataset” mentioned in the V2 prompt | The prompt describes columns including id, name, manufacturer_name, type, pack_size_label and short_composition1/2, but identifies no exact repository, release or license file. | **UNVERIFIED**. Do not choose an arbitrary similarly named repository. Supply the exact source URL, release, provenance and license before importing. Do not scrape a commercial pharmacy site or assume a public download implies reuse rights. |
 | Clinic-owned formulary | A list entered by the doctors from their own formulary, with brand/form/strength/company/composition explicitly reviewed by them. | Source ownership and any third-party restrictions still need confirmation. No external compositions or dosage guidance will be invented. Start with the actual 100 frequently used brands to measure coverage. |
 
@@ -65,3 +65,10 @@ input, not a claim that the package's CC license is invalid.
 The source has no discontinued flag. Its uniformly UNKNOWN marketing-license
 status is not a discontinued status. Source compositions/forms are retained;
 missing linked rows are quarantined. No source clinical instructions were imported.
+
+## Owner confirmation
+
+The owner confirmed an applicable Affiliate License before N1 database import.
+The prior review checkpoint is resolved on that basis. Original package and
+license remain local/ignored; source attribution and transformation notice are
+included in the medicine picker. No agreement was accepted by the agent.
