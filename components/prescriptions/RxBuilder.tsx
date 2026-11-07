@@ -17,14 +17,14 @@ import { DiseaseTemplate, Doctor } from '@/lib/generated/prisma/client'
 import DiseaseTemplateSelector from './DiseaseTemplateSelector'
 import MedicineAutocomplete from './MedicineAutocomplete'
 import VisitFields from './VisitFields'
-import AllergiesBanner from '@/components/patients/AllergiesBanner'
+import PatientStrip from './PatientStrip'
 import { emptyVisitForm, visitFormSchema } from '@/lib/validations/visit.schema'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import Toast from '@/components/ui/Toast'
 import type { DuplicateRxDraft } from '@/lib/validations/prescription.schema'
-import { ChevronDown, Printer, Save, UserRound } from 'lucide-react'
+import { ChevronDown, Printer, Save } from 'lucide-react'
 const RxPreview = dynamic(() => import('./RxPreview'), { ssr: false, loading: () => <p role="status">Loading print preview…</p> })
 
 interface RxBuilderProps {
@@ -41,8 +41,11 @@ interface RxBuilderProps {
 export default function RxBuilder({ allowPatientChange, initialPatientId, patients, templates, duplicate, doctor, draftKey, savedDraft }: RxBuilderProps) {
   const router = useRouter()
   const actionBarRef = useRef<HTMLDivElement>(null)
+  const patientStripRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    if (actionBarRef.current) return reserveScrollSpace(actionBarRef.current, '--rx-action-bar-height')
+    const releaseBar = actionBarRef.current ? reserveScrollSpace(actionBarRef.current, '--rx-action-bar-height') : () => {}
+    const releaseStrip = patientStripRef.current ? reserveScrollSpace(patientStripRef.current, '--rx-patient-strip-height') : () => {}
+    return () => { releaseBar(); releaseStrip() }
   }, [])
   const {
     visit, setVisit,
@@ -135,7 +138,6 @@ export default function RxBuilder({ allowPatientChange, initialPatientId, patien
     }
   }
 
-
   return (
     <div data-rx-builder className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -147,26 +149,20 @@ export default function RxBuilder({ allowPatientChange, initialPatientId, patien
       </div>
       {toast && <Toast message={toast} onDismiss={dismissToast} />}
 
+      <div ref={patientStripRef} className={`sticky top-0 z-30 bg-background pb-2 ${previewEnabled ? '' : 'max-w-4xl'}`}>
+        <PatientStrip patient={selectedPatient} />
+      </div>
       <div className={`grid min-w-0 gap-5 ${previewEnabled ? 'xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]' : 'max-w-4xl'}`}>
         <div className="min-w-0 space-y-5">
-          <section className="clinic-panel p-4 sm:p-5" aria-labelledby="rx-patient-heading">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-secondary text-primary"><UserRound aria-hidden="true" className="size-5" /></span>
-                <div className="min-w-0"><h2 id="rx-patient-heading" className="text-lg font-semibold break-words">{selectedPatient?.name || 'Choose a patient'}</h2>
-                <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium' })}</p></div>
-              </div>
-
-            </div>
-            {allowPatientChange && <PatientPicker onSelect={patient => {
+          {allowPatientChange && <section className="clinic-panel p-4 sm:p-5" aria-label="Choose prescription patient">
+            <PatientPicker onSelect={patient => {
               if (handwritingBusy || saving) return
               const hasEntries = diagnosis.trim() || medicines.length || notes.trim() || handwriting.strokes.length || handwriting.photoId || Object.values(visit).some(value => value.trim())
               if (patientId && patient.id !== patientId && hasEntries && !window.confirm('Change patient? The current prescription entries will be cleared.')) return
               setPickedPatient(patient)
               setPatientId(patient.id)
-            }} />}
-            {selectedPatient?.allergies && <div className="mt-4"><AllergiesBanner allergies={selectedPatient.allergies} /></div>}
-          </section>
+            }} />
+          </section>}
 
           <section className="clinic-panel space-y-4 p-4 sm:p-5">
             <label htmlFor="rx-diagnosis" className="block text-lg font-semibold">Diagnosis</label>
