@@ -1,100 +1,56 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRxBuilderStore } from '@/stores/rxBuilderStore'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileText, Maximize2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog'
 import RxPDFDocument from './RxPDFDocument'
 import { visitFormSchema } from '@/lib/validations/visit.schema'
-import type { Patient, Doctor } from '@/lib/generated/prisma/client'
+import type { PrescriptionPatient } from '@/lib/prescription-patient'
+import type { Doctor } from '@/lib/generated/prisma/client'
 
-// Dynamically import PDFViewerWrapper to avoid SSR issues
-const PDFViewer = dynamic(
-  () => import('./PDFViewerWrapper'),
-  { ssr: false, loading: () => <div className="animate-pulse bg-muted w-full h-full min-h-[500px] flex items-center justify-center text-muted-foreground">Loading PDF Preview...</div> }
-)
+const PDFViewer = dynamic(() => import('./PDFViewerWrapper'), {
+  ssr: false, loading: () => <p className="p-5" role="status">Preparing PDF…</p>,
+})
 
-export default function RxPreview({ patient, doctor, assets, paperSize }: { patient?: Patient; doctor: Doctor; assets: { logoUrl?: string; signatureUrl?: string }; paperSize: 'A4' | 'A5' }) {
-  const [mounted, setMounted] = useState(false)
-  const { diagnosis, medicines, notes, visit } = useRxBuilderStore()
-
+export default function RxPreview({ patient, doctor, paperSize }: { patient?: PrescriptionPatient; doctor: Doctor; paperSize: 'A4' | 'A5' }) {
+  const { diagnosis, medicines, notes, visit, handwriting } = useRxBuilderStore()
+  const [assets, setAssets] = useState<{ logoUrl?: string; signatureUrl?: string } | null>(null)
+  const [photo, setPhoto] = useState<{ id: string; data: string } | null>(null)
+  const [error, setError] = useState('')
   useEffect(() => {
-    setMounted(true)
+    const controller = new AbortController()
+    fetch('/api/clinic/print-assets', { signal: controller.signal, cache: 'no-store', redirect: 'error' })
+      .then(response => { if (!response.ok) throw new Error('Preview unavailable'); return response.json() })
+      .then(setAssets).catch(() => { if (!controller.signal.aborted) setError('Print preview unavailable. You can still save and print.') })
+    return () => controller.abort()
   }, [])
+  useEffect(() => {
+    const controller = new AbortController()
+    setPhoto(null)
+    const id = handwriting.photoId
+    if (!id) return
+    fetch(`/api/handwriting/${id}`, { signal: controller.signal, cache: 'no-store', redirect: 'error' })
+      .then(response => { if (!response.ok) throw new Error('Photo unavailable'); return response.blob() })
+      .then(blob => new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result))
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })).then(data => { if (!controller.signal.aborted) setPhoto({ id, data }) })
+      .catch(() => { if (!controller.signal.aborted) setError('Attached photo unavailable. Try reopening the preview.') })
+    return () => controller.abort()
+  }, [handwriting.photoId])
 
-  // Mock objects for live preview
-
-  const previewPatient = patient || { name: 'Select a patient', dob: null, phone: null, gender: null, allergies: null }
   const measurements = visitFormSchema.safeParse(visit)
-  const previewPrescription = {
-    diagnosis,
-    medicines,
-    notes,
-    createdAt: new Date(),
-    id: 'DRAFT'
-  }
-
-  const isEmpty = !patient && !diagnosis && medicines.length === 0 && !notes
-
-  if (!mounted) return <div className="min-h-12 xl:min-h-96 w-full bg-muted animate-pulse rounded-lg" />
-
-  const PDFComponent = (
-    <PDFViewer className="w-full h-full min-h-0 border-0 rounded-lg">
-      <RxPDFDocument 
-        doctor={doctor}
-        patient={previewPatient}
-        visit={measurements.success ? measurements.data : undefined}
-        prescription={previewPrescription}
-        clinicName={doctor.clinicName || 'Clinic'}
-        {...assets}
-        paperSize={paperSize}
-      />
+  if (error) return <p role="alert" className="clinic-panel p-5">{error}</p>
+  if (!assets || (handwriting.photoId && photo?.id !== handwriting.photoId)) return <p role="status">Loading print assets…</p>
+  return <section className="clinic-panel sticky top-4 flex h-[75dvh] min-h-96 flex-col overflow-hidden">
+    <h2 className="border-b p-4 text-lg font-semibold">Live print preview</h2>
+    <PDFViewer className="h-full w-full flex-1 border-0">
+      <RxPDFDocument doctor={doctor} patient={patient || { name: 'Select a patient', dob: null, phone: null, gender: null, allergies: null }}
+        prescription={{ diagnosis, medicines, notes, handwriting, createdAt: new Date(), id: 'DRAFT' }}
+        visit={measurements.success ? measurements.data : undefined} clinicName={doctor.clinicName || 'Clinic'}
+        {...assets} handwritingPhoto={photo?.data} paperSize={paperSize} />
     </PDFViewer>
-  )
-
-  return (
-    <>
-      {/* Desktop View */}
-      <Card className="hidden xl:flex flex-col sticky top-4 h-[calc(100dvh-7rem)] min-h-[24rem] overflow-hidden bg-white shadow-sm border-border">
-        <CardHeader className="border-b bg-muted/50 pb-4 shrink-0">
-          <div className="flex items-center gap-2 text-primary">
-            <FileText className="w-5 h-5" />
-            <CardTitle className="text-lg">Live PDF Preview</CardTitle>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="p-0 flex-1 relative bg-muted">
-          {isEmpty ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-              <FileText className="w-12 h-12 mb-4 opacity-20" />
-              <p>Start building the prescription to see a preview.</p>
-            </div>
-          ) : (
-            PDFComponent
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Mobile View */}
-      <div className="xl:hidden block">
-        <Dialog>
-          <DialogTrigger
-            render={
-              <Button variant="outline" className="w-full h-12 bg-card" disabled={isEmpty}>
-                <Maximize2 className="w-4 h-4 mr-2" />
-                Preview PDF
-              </Button>
-            }
-          />
-          <DialogContent className="w-[95vw] h-[90vh] max-w-none sm:max-w-none p-0 overflow-hidden flex flex-col">
-            <DialogTitle className="sr-only">Live PDF Preview</DialogTitle>
-            {PDFComponent}
-          </DialogContent>
-        </Dialog>
-      </div>
-    </>
-  )
+  </section>
 }

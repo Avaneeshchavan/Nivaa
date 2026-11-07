@@ -73,6 +73,7 @@ model Visit {
 
   @@index([diagnosis(ops: raw("gin_trgm_ops"))], type: Gin, map: "Visit_diagnosis_trgm_idx")
   @@index([doctorId, patientId])
+  @@index([patientId, date(sort: Desc)])
 }
 
 model Prescription {
@@ -83,6 +84,7 @@ model Prescription {
   diagnosis String?
   notes     String?
   medicines Json     @default("[]")
+  handwriting Json?
   pdfUrl    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -93,15 +95,20 @@ model Prescription {
 
   @@index([diagnosis(ops: raw("gin_trgm_ops"))], type: Gin, map: "Prescription_diagnosis_trgm_idx")
   @@index([doctorId, patientId])
+  @@index([visitId, createdAt(sort: Desc)])
 }
 
 model Medicine {
   id        String   @id @default(cuid())
   name      String
+  system    String   @default("ALLOPATHY")
   generic   String?
   form      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Medicine_name_trgm_idx")
+  @@index([generic(ops: raw("gin_trgm_ops"))], type: Gin, map: "Medicine_generic_trgm_idx")
 }
 
 model DiseaseTemplate {

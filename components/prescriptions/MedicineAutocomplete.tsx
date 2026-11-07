@@ -18,6 +18,7 @@ import { createCustomMedicine } from '@/actions/medicines.actions'
 import type { Medicine } from '@/lib/generated/prisma/client'
 
 export default function MedicineAutocomplete() {
+  const [system, setSystem] = useState<'ALL' | 'ALLOPATHY' | 'AYURVEDIC'>('ALL')
   const [search, setSearch] = useState('')
   const [medicines, setMedicines] = useState<Medicine[]>([])
   const [loading, setLoading] = useState(false)
@@ -31,14 +32,14 @@ export default function MedicineAutocomplete() {
 
   const addMedicine = useRxBuilderStore((state) => state.addMedicine)
 
-  const fetchMedicines = useDebouncedCallback(async (query: string, version: number) => {
+  const fetchMedicines = useDebouncedCallback(async (query: string, version: number, category: string) => {
     if (!query) {
       setMedicines([])
       return
     }
     setLoading(true)
     try {
-      const res = await fetch(`/api/medicines?q=${encodeURIComponent(query)}`)
+      const res = await fetch(`/api/medicines?q=${encodeURIComponent(query)}&system=${category}`)
       const data = await res.json()
       if (!res.ok || !Array.isArray(data)) throw new Error('Medicine search failed. Try again.')
       if (version === searchVersion.current) setMedicines(data)
@@ -54,7 +55,7 @@ export default function MedicineAutocomplete() {
     setError(null)
     setMedicines([])
     setLoading(Boolean(value.trim()))
-    fetchMedicines(value.trim(), ++searchVersion.current)
+    fetchMedicines(value.trim(), ++searchVersion.current, system)
   }
 
   const handleCreate = async () => {
@@ -62,8 +63,8 @@ export default function MedicineAutocomplete() {
     setCreating(true)
     setError(null)
     try {
-      const medicine = await createCustomMedicine({ name: search, strength, form })
-      setSelectedMed(medicine)
+      const medicine = await createCustomMedicine({ name: search, strength, form, system: system === 'AYURVEDIC' ? 'AYURVEDIC' : 'ALLOPATHY' })
+      chooseMedicine(medicine)
       setStrength('')
       setForm('')
     } catch (err) {
@@ -79,8 +80,16 @@ export default function MedicineAutocomplete() {
   const [duration, setDuration] = useState('5 Days')
   const [instructions, setInstructions] = useState('')
 
+  const chooseMedicine = (medicine: Medicine) => {
+    setSelectedMed(medicine)
+    setDosage('')
+    setFrequency(medicine.system === 'AYURVEDIC' ? '' : 'BD')
+    setDuration(medicine.system === 'AYURVEDIC' ? '' : '5 Days')
+    setInstructions('')
+  }
+
   const handleAdd = () => {
-    if (!selectedMed || !dosage.trim()) return
+    if (!selectedMed || !dosage.trim() || !frequency.trim() || !duration.trim()) return
 
     addMedicine({
       id: crypto.randomUUID(), // Temp ID for builder
@@ -106,7 +115,18 @@ export default function MedicineAutocomplete() {
 
   return (
     <div className="space-y-4">
-
+      <label className="flex flex-wrap items-center gap-3 text-sm font-medium">Medicine system
+        <select aria-label="Medicine system" className="min-h-11 rounded-lg border bg-card px-3" value={system}
+          onChange={event => {
+            const category = event.target.value as typeof system
+            setSystem(category)
+            setMedicines([])
+            setLoading(Boolean(search.trim()))
+            fetchMedicines(search.trim(), ++searchVersion.current, category)
+          }}>
+          <option value="ALL">All medicines</option><option value="ALLOPATHY">Allopathy</option><option value="AYURVEDIC">Ayurvedic</option>
+        </select>
+      </label>
 
       {!selectedMed ? (
         <Command shouldFilter={false} className="rounded-xl border border-input bg-card">
@@ -129,12 +149,12 @@ export default function MedicineAutocomplete() {
                     key={med.id}
                     value={med.id}
                     onSelect={() => {
-                      setSelectedMed(med)
+                      chooseMedicine(med)
                     }}
                     className="min-h-11 py-3 cursor-pointer"
                   >
                     <div className="flex flex-col">
-                      <span className="font-medium">{med.name}</span>
+                      <span className="font-medium">{med.name} <span className="text-xs font-normal text-muted-foreground">· {med.system === 'AYURVEDIC' ? 'Ayurvedic' : 'Allopathy'}</span></span>
                       {(med.generic || med.form) && (
                         <span className="text-sm text-muted-foreground">
                           {med.generic} {med.form ? `• ${med.form}` : ''}
@@ -146,7 +166,7 @@ export default function MedicineAutocomplete() {
               </CommandGroup>
             )}
             {search.trim() && (
-              <CommandGroup heading="Custom medicine">
+              <CommandGroup heading={system === 'AYURVEDIC' ? 'Custom Ayurvedic medicine' : 'Custom allopathic medicine'}>
                 <div className="grid grid-cols-2 gap-2 px-2 pb-2">
                   <Input aria-label="Custom medicine strength (optional)" placeholder="Strength (optional)" value={strength} onChange={(e) => setStrength(e.target.value)} maxLength={80} className="h-11" />
                   <Input aria-label="Custom medicine form (optional)" placeholder="Form (optional)" value={form} onChange={(e) => setForm(e.target.value)} maxLength={80} className="h-11" />
@@ -220,7 +240,7 @@ export default function MedicineAutocomplete() {
             </div>
           </div>
 
-          <Button onClick={handleAdd} className="w-full h-12 gap-2" disabled={!dosage.trim()}>
+          <Button onClick={handleAdd} className="w-full h-12 gap-2" disabled={!dosage.trim() || !frequency.trim() || !duration.trim()}>
             <Plus className="w-4 h-4" /> Add to Prescription
           </Button>
         </div>

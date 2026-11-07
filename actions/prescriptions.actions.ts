@@ -13,7 +13,7 @@ export async function createPrescription(data: CreatePrescriptionInput) {
 
   // First verify patient ownership
   const patient = await prisma.patient.findFirst({
-    where: { id: input.patientId, doctorId: doctor.id }
+    where: { id: input.patientId, doctorId: doctor.id }, select: { id: true }
   })
 
   if (!patient) throw new Error('Patient not found or unauthorized')
@@ -31,11 +31,12 @@ export async function createPrescription(data: CreatePrescriptionInput) {
           doctorId: doctor.id,
           diagnosis: input.diagnosis,
           notes: input.notes,
+          handwriting: input.handwriting,
           medicines: input.medicines,
         },
       },
     },
-    include: { prescriptions: true },
+    select: { prescriptions: { select: { id: true } } },
   })
   const prescription = visit.prescriptions[0]
 

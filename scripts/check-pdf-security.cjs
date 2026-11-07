@@ -17,6 +17,7 @@ const mocks = {
   'next/server': { NextResponse },
   '@/actions/auth.actions': { getCurrentDoctor: async () => currentDoctor },
   '@/lib/prisma': { default: { prescription: { findFirst: async args => { query = args; return row } } } },
+  '@/lib/handwriting-storage': { getHandwritingPhoto: async () => undefined },
   '@/lib/pdf-assets': { getPdfAssets: async () => ({}) },
   '@/lib/supabase/server': { createClient: async () => ({ storage: { from: bucket => {
     assert.equal(bucket, 'prescriptions')

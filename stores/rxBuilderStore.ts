@@ -1,5 +1,6 @@
 import { parseRxMedicines } from '@/lib/validations/prescription.schema'
 import type { DiseaseTemplate } from '@/lib/generated/prisma/client'
+import { emptyHandwriting, type Handwriting } from '@/lib/validations/handwriting.schema'
 import { create } from 'zustand'
 import { emptyVisitForm, type VisitFormValues } from '@/lib/validations/visit.schema'
 
@@ -21,6 +22,8 @@ interface RxBuilderState {
   diagnosis: string
   medicines: RxMedicine[]
   notes: string
+  handwriting: Handwriting
+  setHandwriting: (handwriting: Handwriting) => void
   templateId: string | null
   
   // Actions
@@ -40,14 +43,16 @@ const initialState = {
   diagnosis: '',
   medicines: [],
   notes: '',
+  handwriting: emptyHandwriting,
   templateId: null,
 }
 
 export const useRxBuilderStore = create<RxBuilderState>((set) => ({
   ...initialState,
 
+  setHandwriting: (handwriting) => set({ handwriting }),
   setVisit: (visit) => set({ visit }),
-  setPatientId: (id) => set(state => ({ patientId: id, ...(id !== state.patientId ? { visit: { ...emptyVisitForm } } : {}) })),
+  setPatientId: (id) => set(state => ({ patientId: id, ...(id !== state.patientId ? { visit: { ...emptyVisitForm }, handwriting: emptyHandwriting } : {}) })),
   setDiagnosis: (diagnosis) => set({ diagnosis }),
   
   addMedicine: (medicine) => 

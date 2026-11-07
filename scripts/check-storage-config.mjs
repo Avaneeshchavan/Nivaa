@@ -18,12 +18,12 @@ try {
     CREATE POLICY legacy_objects ON storage.objects FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
     CREATE POLICY legacy_buckets ON storage.buckets FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
   `)
-  for (const name of ['202611030003_private_application_tables', '202611030004_private_prescription_storage', '202611030005_signature_storage', '202611030006_rx_drafts', '202611030007_storage_delivery']) await migrate(name)
+  for (const name of ['202611030003_private_application_tables', '202611030004_private_prescription_storage', '202611030005_signature_storage', '202611030006_rx_drafts', '202611030007_storage_delivery', '202611070002_handwriting_storage']) await migrate(name)
   const flags = (await db.query('SELECT id, public FROM storage.buckets ORDER BY id')).rows
-  assert.deepEqual(flags, [{ id: 'logos', public: true }, { id: 'prescriptions', public: false }, { id: 'signatures', public: false }])
-  for (const bucket of ['logos', 'prescriptions', 'signatures']) {
+  assert.deepEqual(flags, [{ id: 'logos', public: true }, { id: 'prescription-notes', public: false }, { id: 'prescriptions', public: false }, { id: 'signatures', public: false }])
+  for (const bucket of ['logos', 'prescriptions', 'signatures', 'prescription-notes']) {
     for (const uid of [a,b]) {
-      const name = bucket === 'signatures' ? 'signature.png' : bucket === 'logos' ? 'logo.png' : 'fixture.pdf'
+      const name = bucket === 'signatures' ? 'signature.png' : bucket === 'logos' ? 'logo.png' : bucket === 'prescription-notes' ? 'fixture.jpg' : 'fixture.pdf'
       await db.query('INSERT INTO storage.objects VALUES ($1,$2,$3,$4)', [`${bucket}-${uid}`, bucket, `${uid}/${name}`, uid])
     }
   }
@@ -31,12 +31,12 @@ try {
     await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [uid])
     await db.exec(`SET ROLE ${role}`)
     const objects = (await db.query('SELECT owner_id FROM storage.objects')).rows
-    assert.equal(objects.length, uid ? 3 : 0)
+    assert.equal(objects.length, uid ? 4 : 0)
     assert.ok(objects.every(row => row.owner_id === uid))
     assert.equal((await db.query('UPDATE storage.buckets SET public=true RETURNING id')).rows.length, 0)
     const other = uid === a ? b : a
     assert.equal((await db.query('DELETE FROM storage.objects WHERE owner_id=$1 RETURNING id', [other])).rows.length, 0)
-    for (const bucket of ['logos', 'prescriptions', 'signatures']) {
+    for (const bucket of ['logos', 'prescriptions', 'signatures', 'prescription-notes']) {
       await assert.rejects(db.query('INSERT INTO storage.objects VALUES ($1,$2,$3,$4)', ['bad', bucket, `${other}/signature.png`, uid || null]), error => error.code === '42501')
     }
     for (const table of ['Doctor', 'Patient', 'Visit', 'Prescription', 'DiseaseTemplate', 'Medicine', 'RxDraft']) await assert.rejects(db.query(`SELECT * FROM "${table}"`), error => error.code === '42501')

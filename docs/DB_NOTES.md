@@ -99,3 +99,9 @@ The patient-search migration installs pg_trgm and indexes; the database migratio
 The visit-measurement migration adds nullable `weightKg`, `bloodPressure`, `temperatureC`, and `spo2` columns. Existing rows are left NULL. `Patient.allergies` already exists and is reused. Apply the migrations before starting this version of the app. Measurements are optional, checked on both client and server, and printed only when filled. A duplicated Rx copies medicines, diagnosis and notes; measurements start empty for the new visit. New Rx timestamps are generated on save, and printed dates use Asia/Kolkata.
 
 Verification on local embedded PostgreSQL confirmed old visit values remain NULL after migration and filled measurements round-trip. Schema checks covered omitted/invalid values and allergy text; PDFs rendered for both filled and empty measurements with conditional headers. The hosted clinic database migrations and authenticated workflows remain pending valid database access.
+
+## November 7 workflow migration
+
+Applied `202611070001_workflow_notes` and `202611070002_handwriting_storage` to the existing database with `npx prisma migrate deploy`. They add medicine system classification, prescription handwriting JSON, visit/prescription history indexes, medicine-search indexes, and the private `prescription-notes` image bucket with owner-scoped restrictive policies. The changes are additive.
+
+The Ayurvedic-only seed ran twice. The database contains 202 allopathic and 65 Ayurvedic presentations. Future deployments must apply tracked migrations before releasing code that reads the new fields. The existing RLS settings continue to cover the added application-table columns. Include the new private bucket in storage backups.

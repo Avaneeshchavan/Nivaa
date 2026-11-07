@@ -1,8 +1,9 @@
 /* eslint-disable jsx-a11y/alt-text */
-import { Document, Page, Text, View, StyleSheet, Image, Font } from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, Image, Font, Svg, Path } from '@react-pdf/renderer'
 import { formatVisitMeasurements, type VisitMeasurements } from '@/lib/validations/visit.schema'
 import { Doctor, Patient, Prescription } from '@/lib/generated/prisma/client'
 
+import { parseHandwriting, strokePath } from '@/lib/validations/handwriting.schema'
 import fontSource from '@/lib/pdf-font.json'
 Font.register({ family: 'Nivaa', src: fontSource })
 
@@ -62,14 +63,16 @@ interface RxPDFProps {
   visit?: VisitMeasurements | null
   doctor: Pick<Doctor, 'name' | 'email'> & Partial<Pick<Doctor, 'license' | 'address' | 'phone'>>
   patient: Pick<Patient, 'name' | 'dob' | 'gender' | 'phone' | 'allergies'>
-  prescription: Pick<Prescription, 'id' | 'createdAt' | 'diagnosis' | 'notes'> & { medicines: unknown }
+  prescription: Pick<Prescription, 'id' | 'createdAt' | 'diagnosis' | 'notes'> & { medicines: unknown; handwriting?: unknown }
   clinicName?: string
+  handwritingPhoto?: string
   signatureUrl?: string
   paperSize?: 'A4' | 'A5'
   logoUrl?: string
 }
 
-export default function RxPDFDocument({ doctor, patient, prescription, clinicName = 'Clinic Name', logoUrl, signatureUrl, paperSize = 'A5', visit }: RxPDFProps) {
+export default function RxPDFDocument({ doctor, patient, prescription, clinicName = 'Clinic Name', logoUrl, signatureUrl, paperSize = 'A5', visit, handwritingPhoto }: RxPDFProps) {
+  const handwriting = parseHandwriting(prescription.handwriting)
   const meds: RxMedicine[] = typeof prescription.medicines === 'string'
     ? JSON.parse(prescription.medicines as string)
     : (prescription.medicines as RxMedicine[] || [])
@@ -172,6 +175,22 @@ export default function RxPDFDocument({ doctor, patient, prescription, clinicNam
           </View>
         </View>
       </Page>
+      {handwriting.strokes.length > 0 && <Page size={paperSize} style={styles.page}>
+        <Text style={styles.clinicName}>{clinicName}</Text>
+        <Text style={styles.sectionTitle}>Handwritten notes</Text>
+        <Text>{patient.name} · {dateText}</Text>
+        <Text style={{ ...styles.doctorDetails, marginTop: 5 }}>Rx: {prescription.id}</Text>
+        <Svg viewBox="0 0 1000 600" style={{ width: '100%', height: paperSize === 'A5' ? 210 : 300, marginTop: 20 }}>
+          {handwriting.strokes.map((stroke, index) => <Path key={index} d={strokePath(stroke)} stroke="#172a35" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" fill="none" />)}
+        </Svg>
+      </Page>}
+      {handwriting.photoId && handwritingPhoto && <Page size={paperSize} style={styles.page}>
+        <Text style={styles.clinicName}>{clinicName}</Text>
+        <Text style={styles.sectionTitle}>Attached paper note</Text>
+        <Text>{patient.name} · {dateText}</Text>
+        <Text style={{ ...styles.doctorDetails, marginTop: 5 }}>Rx: {prescription.id}</Text>
+        <Image src={handwritingPhoto} style={{ width: '100%', height: paperSize === 'A5' ? 300 : 500, objectFit: 'contain', marginTop: 20 }} />
+      </Page>}
     </Document>
   )
 }

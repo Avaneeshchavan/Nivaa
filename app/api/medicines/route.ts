@@ -4,7 +4,8 @@ import { getCurrentDoctor } from '@/actions/auth.actions'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const q = searchParams.get('q')
+  const q = searchParams.get('q')?.trim().slice(0, 100)
+  const system = searchParams.get('system')
 
   const doctor = await getCurrentDoctor()
   if (!doctor) {
@@ -18,12 +19,14 @@ export async function GET(request: Request) {
   try {
     const medicines = await prisma.medicine.findMany({
       where: {
+        ...(system === 'AYURVEDIC' || system === 'ALLOPATHY' ? { system } : {}),
         OR: [
           { name: { contains: q, mode: 'insensitive' } },
           { generic: { contains: q, mode: 'insensitive' } },
         ],
       },
       take: 10,
+      orderBy: { name: 'asc' },
     })
 
     const response = NextResponse.json(medicines)

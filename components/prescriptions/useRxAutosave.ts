@@ -28,7 +28,7 @@ export function useRxAutosave(key: string) {
       if (!parsed.success) { setStatus('Draft exceeds save limits'); return }
       pending.current = parsed.data
       setStatus('Saving draft…')
-      timer.current = setTimeout(save, 800)
+      timer.current = setTimeout(save, 1500)
     })
     return () => { unsubscribe(); clearTimeout(timer.current); save(); useRxBuilderStore.getState().reset() }
   }, [key])

@@ -5,8 +5,10 @@ import prisma from '@/lib/prisma'
 import { z } from 'zod'
 import { isAllowedDoctorEmail, isAllowedDoctorUser } from '@/lib/auth/doctor-access'
 import { redirect } from 'next/navigation'
+import { cache } from 'react'
 
-export async function getCurrentDoctor() {
+// React cache lives for one server render, never across doctors or requests.
+const resolveCurrentDoctor = cache(async () => {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
 
@@ -26,6 +28,10 @@ export async function getCurrentDoctor() {
     console.error('Error fetching doctor:', err)
     return null
   }
+})
+
+export async function getCurrentDoctor() {
+  return resolveCurrentDoctor()
 }
 
 const signInSchema = z.object({ email: z.string().trim().toLowerCase().max(254).pipe(z.email()), password: z.string().min(6).max(1024) })

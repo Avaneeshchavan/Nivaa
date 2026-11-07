@@ -6,12 +6,13 @@ import { getCurrentDoctor } from './auth.actions'
 import { medicineCatalogId } from '@/lib/medicines/catalog'
 
 const customMedicineSchema = z.object({
+  system: z.enum(['ALLOPATHY', 'AYURVEDIC']).default('ALLOPATHY'),
   name: z.string().trim().min(1).max(160),
   strength: z.string().trim().max(80).optional(),
   form: z.string().trim().max(80).optional(),
 })
 
-export async function createCustomMedicine(input: { name: string; strength?: string; form?: string }) {
+export async function createCustomMedicine(input: { name: string; strength?: string; form?: string; system?: 'ALLOPATHY' | 'AYURVEDIC' }) {
   if (!await getCurrentDoctor()) throw new Error('Unauthorized')
   const data = customMedicineSchema.parse(input)
   // The model has no strength column; preserve strength in the display name.
@@ -19,7 +20,7 @@ export async function createCustomMedicine(input: { name: string; strength?: str
   const form = data.form || null
   return prisma.medicine.upsert({
     where: { id: medicineCatalogId(name, form) },
-    create: { name, form },
+    create: { name, form, system: data.system },
     update: {},
   })
 }

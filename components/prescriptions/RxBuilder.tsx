@@ -6,10 +6,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useRxBuilderStore } from '@/stores/rxBuilderStore'
 import { createPrescription } from '@/actions/prescriptions.actions'
-import { DiseaseTemplate, Patient, Doctor } from '@/lib/generated/prisma/client'
+import type { PrescriptionPatient } from '@/lib/prescription-patient'
+import { emptyHandwriting } from '@/lib/validations/handwriting.schema'
+import dynamic from 'next/dynamic'
+import HandwritingEditor from './HandwritingEditor'
+import PatientPicker from './PatientPicker'
+import { DiseaseTemplate, Doctor } from '@/lib/generated/prisma/client'
 import DiseaseTemplateSelector from './DiseaseTemplateSelector'
 import MedicineAutocomplete from './MedicineAutocomplete'
-import RxPreview from './RxPreview'
 import VisitFields from './VisitFields'
 import AllergiesBanner from '@/components/patients/AllergiesBanner'
 import { emptyVisitForm, visitFormSchema } from '@/lib/validations/visit.schema'
@@ -19,35 +23,39 @@ import { Button } from '@/components/ui/button'
 import Toast from '@/components/ui/Toast'
 import type { DuplicateRxDraft } from '@/lib/validations/prescription.schema'
 import { ChevronDown, Printer, Save, UserRound } from 'lucide-react'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+const RxPreview = dynamic(() => import('./RxPreview'), { ssr: false, loading: () => <p role="status">Loading print preview…</p> })
 
 interface RxBuilderProps {
   draftKey: string
   savedDraft: RxDraft | null
   doctor: Doctor
-  assets: { logoUrl?: string; signatureUrl?: string }
   duplicate?: DuplicateRxDraft | null
+  allowPatientChange?: boolean
   initialPatientId?: string
-  patients: Patient[]
+  patients: PrescriptionPatient[]
   templates: DiseaseTemplate[]
 }
 
-export default function RxBuilder({ initialPatientId, patients, templates, duplicate, doctor, assets, draftKey, savedDraft }: RxBuilderProps) {
+export default function RxBuilder({ allowPatientChange, initialPatientId, patients, templates, duplicate, doctor, draftKey, savedDraft }: RxBuilderProps) {
   const router = useRouter()
   const {
     visit, setVisit,
     patientId, setPatientId,
     diagnosis, setDiagnosis,
     medicines, notes, setNotes,
+    handwriting, setHandwriting,
     reset
   } = useRxBuilderStore()
 
+  const [previewEnabled, setPreviewEnabled] = useState(false)
+  const [handwritingBusy, setHandwritingBusy] = useState(false)
+  const [pickedPatient, setPickedPatient] = useState<PrescriptionPatient | null>(null)
   const [paperSize, setPaperSize] = useState<'A4' | 'A5'>('A5')
   const [saving, setSaving] = useState(false)
   const [visitError, setVisitError] = useState('')
   const [saveError, setSaveError] = useState('')
   const [visitOpen, setVisitOpen] = useState(false)
-  const selectedPatient = patients.find(p => p.id === patientId)
+  const selectedPatient = pickedPatient?.id === patientId ? pickedPatient : patients.find(p => p.id === patientId)
 
   const [toast, setToast] = useState('')
   const [editingMedicine, setEditingMedicine] = useState<string | null>(null)
@@ -58,6 +66,7 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
       patientId: initialPatientId || null,
       diagnosis: duplicate?.diagnosis || '',
       notes: duplicate?.notes || '',
+      handwriting: emptyHandwriting,
       medicines: duplicate?.medicines.map(m => ({ ...m, id: crypto.randomUUID() })) || [],
       templateId: null,
       visit: { ...emptyVisitForm },
@@ -93,7 +102,8 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
         diagnosis,
         medicines,
         visit: measurements.data,
-        notes
+        notes,
+        handwriting,
       })
 
       try { await autosave.complete() } catch { setToast('Prescription saved; old draft could not be cleared.') }
@@ -111,7 +121,7 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
     }
   }
 
-  const canSave = Boolean(patientId && (diagnosis.trim() || medicines.length) && !saving)
+  const canSave = Boolean(patientId && (diagnosis.trim() || medicines.length || notes.trim() || handwriting.strokes.length || handwriting.photoId) && !saving && !handwritingBusy)
 
   return (
     <div className="space-y-5">
@@ -124,7 +134,7 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
       </div>
       {toast && <Toast message={toast} onDismiss={dismissToast} />}
 
-      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+      <div className={`grid min-w-0 gap-5 ${previewEnabled ? 'xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]' : 'max-w-4xl'}`}>
         <div className="min-w-0 space-y-5">
           <section className="clinic-panel p-4 sm:p-5" aria-labelledby="rx-patient-heading">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -133,15 +143,13 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
                 <div className="min-w-0"><h2 id="rx-patient-heading" className="text-lg font-semibold break-words">{selectedPatient?.name || 'Choose a patient'}</h2>
                 <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium' })}</p></div>
               </div>
-              {!initialPatientId && (
-                <Select value={patientId || undefined} onValueChange={setPatientId}>
-                  <SelectTrigger aria-label="Choose patient" className="w-full sm:max-w-xs"><SelectValue placeholder="Select patient" /></SelectTrigger>
-                  <SelectContent>
-                    {patients.map(p => <SelectItem key={p.id} value={p.id}>{p.name}{p.phone ? ` · ${p.phone}` : ''}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
+
             </div>
+            {allowPatientChange && <PatientPicker onSelect={patient => {
+              if (handwritingBusy || saving) return
+              setPickedPatient(patient)
+              setPatientId(patient.id)
+            }} />}
             {selectedPatient?.allergies && <div className="mt-4"><AllergiesBanner allergies={selectedPatient.allergies} /></div>}
           </section>
 
@@ -211,6 +219,13 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
             <Textarea id="rx-notes" value={notes} onChange={event => setNotes(event.target.value)} placeholder="Instructions or follow-up advice" className="min-h-24" />
           </section>
 
+          <section className="clinic-panel space-y-3 p-4 sm:p-5">
+            <h2 className="text-lg font-semibold">Handwritten notes</h2>
+            <HandwritingEditor key={patientId || 'new'} value={handwriting} onChange={setHandwriting} disabled={saving || !patientId} onBusyChange={setHandwritingBusy} />
+            {!patientId && <p className="text-sm text-muted-foreground">Choose a patient to add handwriting.</p>}
+          </section>
+
+          <Button variant="outline" onClick={() => setPreviewEnabled(value => !value)}>{previewEnabled ? 'Hide print preview' : 'Show print preview'}</Button>
           <div className="sticky bottom-0 z-20 space-y-2 rounded-2xl border bg-card p-3 shadow-md">
             {saveError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-900">{saveError}</p>}
             <div className="flex flex-wrap items-center gap-2">
@@ -224,7 +239,7 @@ export default function RxBuilder({ initialPatientId, patients, templates, dupli
         </div>
 
         <div className="min-w-0">
-          <RxPreview patient={selectedPatient} doctor={doctor} assets={assets} paperSize={paperSize} />
+          {previewEnabled && <RxPreview patient={selectedPatient} doctor={doctor} paperSize={paperSize} />}
         </div>
       </div>
     </div>

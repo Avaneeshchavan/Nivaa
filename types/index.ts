@@ -4,10 +4,9 @@ import { PatientFormData } from '@/lib/validations/patient.schema'
 export type { PatientFormData }
 
 export type VisitWithPrescriptions = Visit & {
-  prescriptions: Prescription[]
+  prescriptions: Pick<Prescription, 'id' | 'createdAt'>[]
 }
 
 export type PatientWithVisits = Patient & {
   visits: VisitWithPrescriptions[]
-  prescriptions: Prescription[]
 }

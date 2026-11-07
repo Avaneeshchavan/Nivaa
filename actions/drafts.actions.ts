@@ -16,7 +16,7 @@ export async function getRxDraft(key: string): Promise<RxDraft | null> {
   if (!draft) return null
   const parsed = rxDraftSchema.safeParse(draft.payload)
   if (!parsed.success) return null
-  await requireOwner(parsed.data.patientId)
+  if (parsed.data.patientId && !await prisma.patient.findFirst({ where: { id: parsed.data.patientId, doctorId: doctor.id }, select: { id: true } })) return null
   return parsed.data
 }
 export async function saveRxDraft(key: string, data: RxDraft) {

@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
 import Link from 'next/link'
-import { getPatients } from '@/actions/patients.actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
@@ -21,13 +20,15 @@ export default function PatientSearch() {
   }, [])
   useEffect(() => {
     if (!open) { setPatients([]); setQuery(''); return }
-    let cancelled = false
+    const controller = new AbortController()
     setStatus('Searching…')
     const timer = setTimeout(() => {
-      getPatients(query).then(result => { if (!cancelled) { setPatients(result); setStatus(result.length ? '' : 'No patients found') } })
-        .catch(() => { if (!cancelled) { setPatients([]); setStatus('Search unavailable') } })
+      fetch(`/api/patients?q=${encodeURIComponent(query)}`, { signal: controller.signal, cache: 'no-store', redirect: 'error' })
+        .then(response => { if (!response.ok) throw new Error('Search unavailable'); return response.json() })
+        .then(result => { if (!controller.signal.aborted) { setPatients(result); setStatus(result.length ? '' : 'No patients found') } })
+        .catch(() => { if (!controller.signal.aborted) { setPatients([]); setStatus('Search unavailable') } })
     }, 150)
-    return () => { cancelled = true; clearTimeout(timer) }
+    return () => { controller.abort(); clearTimeout(timer) }
   }, [open, query])
   return <>
     <Button variant="outline" className="min-h-11 px-3" aria-label="Find a patient" onClick={() => setOpen(true)}><Search aria-hidden="true" /><span className="hidden sm:inline">Find patient</span><kbd className="hidden xl:inline rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">⌘ / Ctrl K</kbd></Button>

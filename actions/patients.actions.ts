@@ -1,5 +1,6 @@
 'use server'
 
+import { prescriptionPatientSelect } from '@/lib/prescription-patient'
 import prisma from '@/lib/prisma'
 import { getCurrentDoctor } from './auth.actions'
 import { patientSchema, type PatientFormData } from '@/lib/validations/patient.schema'
@@ -28,11 +29,9 @@ export async function getPatients(search?: string) {
     where: { doctorId: doctor.id, ...(matches ? { id: { in: matches.map(p => p.id) } } : {}) },
     take: 50,
     orderBy: { updatedAt: 'desc' },
-    include: {
-      visits: {
-        orderBy: { date: 'desc' },
-        take: 1,
-      },
+    select: {
+      id: true, name: true, phone: true,
+      visits: { orderBy: { date: 'desc' }, take: 1, select: { date: true } },
     },
   })
 
@@ -51,9 +50,8 @@ export async function getPatient(id: string) {
     include: {
       visits: {
         orderBy: { date: 'desc' },
-        include: { prescriptions: true },
+        include: { prescriptions: { select: { id: true, createdAt: true } } },
       },
-      prescriptions: true,
     },
   })
 
@@ -72,6 +70,7 @@ export async function createPatient(data: PatientFormData) {
       dob: data.dob ? new Date(data.dob) : null,
       doctorId: doctor.id,
     },
+    select: { id: true },
   })
 
   revalidatePath('/patients')
@@ -83,15 +82,8 @@ export async function updatePatient(id: string, data: PatientFormData) {
   const doctor = await getCurrentDoctor()
   if (!doctor) throw new Error('Unauthorized')
 
-  // First verify ownership
-  const existing = await prisma.patient.findFirst({
-    where: { id, doctorId: doctor.id },
-  })
-
-  if (!existing) throw new Error('Patient not found or unauthorized')
-
   const updatedPatient = await prisma.patient.update({
-    where: { id },
+    where: { id, doctorId: doctor.id },
     data: {
       ...data,
       dob: data.dob ? new Date(data.dob) : null,
@@ -115,4 +107,26 @@ export async function findDuplicatePatients(name: string, phone: string) {
       AND public.nivaa_patient_name_similarity(name, ${name.trim()}) >= 0.35
     ORDER BY public.nivaa_patient_name_similarity(name, ${name.trim()}) DESC LIMIT 5
   `
+}
+
+export async function getPrescriptionPatients(search?: string) {
+  const doctor = await getCurrentDoctor()
+  if (!doctor) throw new Error('Unauthorized')
+  const term = search?.trim().slice(0, 100)
+  if (!term) return []
+  return prisma.patient.findMany({
+    where: { doctorId: doctor.id, OR: [
+      { name: { contains: term, mode: 'insensitive' } },
+      { phone: { contains: term, mode: 'insensitive' } },
+    ] },
+    select: prescriptionPatientSelect, orderBy: { updatedAt: 'desc' }, take: 25,
+  })
+}
+
+export async function getPatientForEdit(id: string) {
+  const doctor = await getCurrentDoctor()
+  if (!doctor) throw new Error('Unauthorized')
+  const patient = await prisma.patient.findFirst({ where: { id, doctorId: doctor.id } })
+  if (!patient) throw new Error('Patient not found')
+  return patient
 }

@@ -30,3 +30,8 @@
 ## Phase 5 - Optional, only after parents have used it for a week
 - [ ] 5.1 Photo of handwritten Rx -> OCR -> editable prefilled form. Decide OCR provider + patient-data consent first; never auto-save without doctor review.
 - [ ] 5.2 PWA install + offline-tolerant drafts for iPad.
+
+## Requested workflow updates — November 7
+- [x] Reduce repeated doctor queries, patient/history payloads, blocking PDF initialization and save round trips. Add bounded patient selection, loading feedback and Mumbai function placement.
+- [x] Add a searchable Ayurvedic medicine catalog and system filter. Apply additive migrations and seed the live database idempotently.
+- [x] Add private, editable handwritten prescription notes with drawing, paper-photo attachment, draft support and A4/A5 printing. Verify ownership, concurrency, TypeScript and production build.

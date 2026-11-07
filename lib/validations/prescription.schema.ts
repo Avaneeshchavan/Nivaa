@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { emptyHandwriting, handwritingSchema } from './handwriting.schema'
 import { visitSchema } from './visit.schema'
 
 export const rxMedicineSchema = z.object({
@@ -30,5 +31,6 @@ export const prescriptionSchema = z.object({
   medicines: z.array(rxMedicineSchema).max(100),
   notes: z.string().max(8000),
   visit: visitSchema.optional(),
+  handwriting: handwritingSchema.default(emptyHandwriting),
 })
 export type CreatePrescriptionInput = z.input<typeof prescriptionSchema>

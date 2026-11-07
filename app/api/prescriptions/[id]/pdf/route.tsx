@@ -1,3 +1,4 @@
+import { getHandwritingPhoto } from '@/lib/handwriting-storage'
 import { getPdfAssets } from '@/lib/pdf-assets'
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
@@ -33,7 +34,7 @@ export async function GET(
       return NextResponse.json({ error: 'Not found or unauthorized' }, { status: 404, headers: privateHeaders })
     }
 
-    const assets = await getPdfAssets(doctor)
+    const [assets, handwritingPhoto] = await Promise.all([getPdfAssets(doctor), getHandwritingPhoto(doctor.supabaseId, prescription.handwriting)])
     const paperSize = new URL(request.url).searchParams.get('size') === 'A4' ? 'A4' : 'A5'
     // Render PDF to stream
     const pdfStream = await renderToStream(
@@ -45,6 +46,7 @@ export async function GET(
         clinicName={doctor.clinicName || 'Clinic'}
         {...assets}
         paperSize={paperSize}
+        handwritingPhoto={handwritingPhoto}
       />
     )
 

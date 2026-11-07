@@ -100,6 +100,7 @@ export default async function PatientDetailsPage({
                               className={buttonVariants({ variant: 'secondary', className: 'min-h-11' })}>
                               View Rx{prescriptions.length > 1 ? ` ${index + 1}` : ''}
                             </a>
+                            <Link href={`/prescriptions/${rx.id}/notes`} className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>Add / edit notes</Link>
                             <Link href={`/prescriptions/new?duplicateId=${rx.id}`}
                               className={buttonVariants({ variant: 'outline', className: 'min-h-11' })}>
                               Duplicate as new Rx
