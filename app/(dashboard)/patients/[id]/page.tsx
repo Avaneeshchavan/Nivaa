@@ -37,6 +37,7 @@ export default async function PatientDetailsPage({
               <Link href={`/prescriptions/new?patientId=${patient.id}`} className={buttonVariants({ size: 'lg' })}>
                 <FileText aria-hidden="true" />New prescription
               </Link>
+              <Link href={`/prescriptions/new?patientId=${patient.id}&repeat=1`} className={buttonVariants({ variant: 'outline', size: 'lg' })}>Repeat last Rx</Link>
               <Link href={`/patients/${patient.id}/edit`} className={buttonVariants({ variant: 'outline', size: 'lg' })}>
                 <Edit aria-hidden="true" />Edit patient
               </Link>

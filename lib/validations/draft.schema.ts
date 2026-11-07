@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { rxMedicineSchema } from './prescription.schema'
 export const draftKeySchema = z.string().min(1).max(160).regex(/^[a-zA-Z0-9_-]+$/)
 export const rxDraftSchema = z.object({
+  followUpDate: z.union([z.literal(''), z.iso.date()]).optional(),
   patientId: z.string().max(100).nullable(),
   diagnosis: z.string().max(4000),
   medicines: z.array(rxMedicineSchema).max(100),

@@ -12,6 +12,7 @@ export async function rememberMedicineUse(input: MedicineUse) {
     if (!await prisma.brand.findFirst({ where: { id: data.brandId, isDiscontinued: false }, select: { id: true } })) throw new Error('Medicine unavailable')
     const values = { lastUsedAt: new Date(), defaultDosage: data.dosage, defaultFrequency: data.frequency,
       defaultDuration: data.duration, defaultInstruction: data.instructions,
+      ...(data.doseUnit !== undefined ? { defaultDoseUnit: data.doseUnit } : {}),
       ...(data.pattern !== undefined ? { defaultPattern: data.pattern } : {}),
       ...(data.food !== undefined ? { defaultFood: data.food } : {}),
       ...(data.durationDays !== undefined ? { defaultDurationDays: data.durationDays } : {}) }

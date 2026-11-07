@@ -21,3 +21,7 @@ viewport checks or screenshots could be obtained. The 768/820/1024/1180/1366px
 review in docs/V2_AUDIT.md is explicitly source arithmetic, not browser evidence.
 Safari virtual-keyboard/focus, real touch/Pencil and signed-in HTTP timing remain
 unverified. No auth bypass or substitute browser-control mechanism was used.
+
+## V2 N2 rendered workflow/performance acceptance — November 7
+
+N2 implementation, synthetic workflow/draft/SQL/PDF tests and development-only timing instrumentation are complete. Attaching the existing signed-in browser tab again returned `browser.user is unavailable`. Consequently no actual React Profiler capture, authenticated save latency, timed four-medicine iPad run, Safari touch drag, keyboard-overlay/zoom inspection or physical print acceptance can be claimed. Reproduction steps and narrower Node core measurements are in docs/PERF_BUDGET.md. No auth bypass, new dependency or substitute browser-control mechanism was used. Review N2 before proceeding to N3.

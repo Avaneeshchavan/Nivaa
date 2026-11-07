@@ -22,6 +22,7 @@ function harness(file, mocks = {}) {
     '@/components/ui/command': Object.fromEntries(['Command', 'CommandGroup', 'CommandInput', 'CommandItem', 'CommandList'].map(key => [key, key])),
     '@/components/ui/select': Object.fromEntries(['Select', 'SelectContent', 'SelectItem', 'SelectTrigger', 'SelectValue'].map(key => [key, key])),
     '@/stores/rxBuilderStore': { useRxBuilderStore: select => select({ addMedicine() {} }) },
+    './DoseFields': { default: 'DoseFields', blankDose: require('../components/prescriptions/DoseFields.tsx').blankDose },
     './CustomMedicineForm': { default: 'CustomMedicineForm' },
     '@/lib/validations/custom-medicine.schema': schema,
     ...mocks,
@@ -33,6 +34,9 @@ function harness(file, mocks = {}) {
 }
 function nodes(tree) {
   if (!tree || typeof tree !== 'object') return []
+  if (typeof tree.type === 'function' && ['Button','Input'].includes(tree.type.name)) return nodes({ ...tree, type: tree.type.name.toLowerCase() })
+  if (tree.type?.render && tree.type?.displayName === 'Input') return nodes(tree.type.render(tree.props, null))
+  if (tree.type === 'DoseFields') { global.React = React; return nodes(require('../components/prescriptions/DoseFields.tsx').default(tree.props)) }
   return [tree, ...React.Children.toArray(tree.props?.children).flatMap(nodes)]
 }
 const find = (tree, predicate) => nodes(tree).find(predicate)
@@ -62,7 +66,9 @@ const text = tree => typeof tree === 'string' || typeof tree === 'number' ? Stri
   assert.equal(find(tree, node => node.type === 'input' && node.props.id === 'rx-med-duration').props.value, '', 'no inferred AYUSH duration')
   // Complete the existing dosage stage and reuse the template editor's onAdd.
   find(tree, node => node.type === 'input' && node.props.id === 'rx-med-dosage').props.onChange({ target: { value: 'Doctor-entered dose' } })
-  find(tree, node => node.type === 'Select').props.onValueChange('OD')
+  tree = picker({ onAdd: item => added.push(item) })
+  find(tree, node => node.props?.id === 'rx-med-frequency').props.onChange({ target: { value: 'OD' } })
+  tree = picker({ onAdd: item => added.push(item) })
   find(tree, node => node.type === 'input' && node.props.id === 'rx-med-duration').props.onChange({ target: { value: 'Doctor-entered duration' } })
   tree = picker({ onAdd: item => added.push(item) })
   find(tree, node => node.type === 'button' && text(node).includes('Add to Prescription')).props.onClick()

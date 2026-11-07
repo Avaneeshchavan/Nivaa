@@ -185,3 +185,23 @@ SQL-managed expression indexes. Preserve them in future migration/introspection
 work. Keep all source migrations immutable after application. Resume was tested
 against the same package; do not treat a changed source release as an approved
 in-place overwrite of current catalog entries. Original Rx snapshots remain stable.
+
+## V2 N2 — prescription workflow (November 7)
+
+Migration `202611070007_rx_workflow` is additive: nullable Prescription.followUpDate, nullable DoctorMedicinePref.defaultDoseUnit, EMPTY food enum, doctor-owned AdviceSnippet and TemplatePreference tables. Existing Rx/catalog rows are not rewritten. New tables follow the existing server-only restrictive-RLS and revoked API-role grants; no existing auth, Storage or policy files were modified.
+
+Applied with `node scripts/migrate-verified.mjs deploy` after the synthetic SQL test. All 15 migrations are applied. Metadata-only verification found 120 snippets (40 per language across the two existing doctors), RLS enabled and no anon/authenticated SELECT on either new table. Catalog totals remain 94,165 Brand rows and 267 legacy Medicine rows. No live patient contents were read for these checks and no test patient/Rx was created in production.
+
+Fresh environment / deploy commands, from the repository root:
+
+```sh
+npx prisma generate
+node scripts/check-rx-workflow-migration.mjs
+node scripts/migrate-verified.mjs status
+node scripts/migrate-verified.mjs deploy
+npm run build
+```
+
+The advice seed is part of this one-time migration. There is no additional seed command to run on the current database. New doctors can explicitly initialize their library in the builder. See ADVICE_REVIEW.md. Do not edit/reapply the migration, reset the database, or replace existing rows to update text; use the doctor-owned editor.
+
+The earlier full backup/restore drill remains incomplete. This additive migration does not complete that operational requirement, change provider plans or introduce a least-privilege runtime login. Those remain explicit N7/owner work.

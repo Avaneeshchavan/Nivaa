@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { Button } from './button'
 
-export default function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+export default function Toast({ message, onDismiss, action }: { message: string; onDismiss: () => void; action?: { label: string; onClick: () => void } }) {
   useEffect(() => {
     const timer = setTimeout(onDismiss, 6000)
     return () => clearTimeout(timer)
@@ -12,6 +12,7 @@ export default function Toast({ message, onDismiss }: { message: string; onDismi
   return (
     <div role="status" className="fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:max-w-md z-50 flex items-center gap-3 rounded-lg bg-gray-900 p-4 text-white shadow-lg">
       <span className="flex-1">{message}</span>
+      {action && <Button variant="ghost" className="min-h-11" onClick={() => { action.onClick(); onDismiss() }}>{action.label}</Button>}
       <Button variant="ghost" className="min-h-11" onClick={onDismiss} aria-label="Dismiss notification">Close</Button>
     </div>
   )

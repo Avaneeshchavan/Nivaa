@@ -6,6 +6,8 @@ import { recordIdSchema } from '@/lib/validations/id.schema'
 
 import { recordAudit } from '@/lib/security/audit'
 import prisma from '@/lib/prisma'
+import { prescriptionPatientSelect } from '@/lib/prescription-patient'
+import { quantityForPattern } from '@/lib/rx/dose'
 import { getCurrentDoctor } from './auth.actions'
 import { revalidatePath } from 'next/cache'
 import { parseRxMedicines, prescriptionSchema, type CreatePrescriptionInput, type DuplicateRxDraft } from '@/lib/validations/prescription.schema'
@@ -38,8 +40,9 @@ export async function createPrescription(data: CreatePrescriptionInput) {
               doctorId: doctor.id,
               diagnosis: input.diagnosis,
               notes: input.notes,
+              followUpDate: input.followUpDate ? new Date(`${input.followUpDate}T00:00:00.000Z`) : null,
               handwriting: input.handwriting,
-              medicines: input.medicines,
+              medicines: input.medicines.map(m => ({ ...m, quantity: m.doseUnit && m.doseUnit !== 'other' ? quantityForPattern(m.pattern || '', m.durationDays, m.frequency) : null })),
             },
           },
         },
@@ -74,5 +77,30 @@ export async function getPrescriptionForDuplicate(id: string): Promise<Duplicate
       medicines: parseRxMedicines(source.medicines),
       notes: source.notes || '',
     }
+  })
+}
+
+export async function getLastPrescriptionForRepeat(patientId: string): Promise<DuplicateRxDraft | null> {
+  return withSafeActionError('Previous prescription unavailable. Try again.', async () => {
+    patientId = recordIdSchema.parse(patientId)
+    const doctor = await getCurrentDoctor()
+    if (!doctor) throw new Error('Unauthorized')
+    const source = await prisma.prescription.findFirst({
+      where: { patientId, doctorId: doctor.id, patient: { doctorId: doctor.id } },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: { id: true, patientId: true, diagnosis: true, medicines: true, notes: true },
+    })
+    if (!source) return null
+    await recordAudit(doctor.id, 'PRESCRIPTION_COPY', source.id)
+    return { sourceId: source.id, patientId: source.patientId, diagnosis: source.diagnosis || '', medicines: parseRxMedicines(source.medicines), notes: source.notes || '' }
+  })
+}
+
+export async function getRxPatientContext(patientId: string) {
+  return withSafeActionError('Patient details unavailable. Try again.', async () => {
+    patientId = recordIdSchema.parse(patientId)
+    const doctor = await getCurrentDoctor()
+    if (!doctor) throw new Error('Unauthorized')
+    return prisma.patient.findFirst({ where: { id: patientId, doctorId: doctor.id }, select: prescriptionPatientSelect })
   })
 }

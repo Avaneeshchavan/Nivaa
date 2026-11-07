@@ -27,6 +27,8 @@ model Doctor {
   phone      String?
   logoUrl    String?
 
+  adviceSnippets AdviceSnippet[]
+  templatePreferences TemplatePreference[]
   medicinePreferences DoctorMedicinePref[]
   drafts        RxDraft[]
   patients      Patient[]
@@ -84,6 +86,7 @@ model Prescription {
   visitId   String?
   doctorId  String
   diagnosis String?
+  followUpDate DateTime?
   notes     String?
   medicines Json     @default("[]")
   handwriting Json?
@@ -116,6 +119,7 @@ model Medicine {
 }
 
 model DiseaseTemplate {
+  preferences TemplatePreference[]
   id        String   @id @default(cuid())
   doctorId  String
   name      String
@@ -184,6 +188,7 @@ enum MedicineFood {
   AFTER
   WITH
   ANY
+  EMPTY
 }
 model Brand {
   id String @id
@@ -247,6 +252,7 @@ model DoctorMedicinePref {
   defaultFood MedicineFood?
   defaultDurationDays Int?
   defaultInstruction String?
+  defaultDoseUnit String?
   defaultDosage String?
   defaultFrequency String?
   defaultDuration String?
@@ -254,4 +260,29 @@ model DoctorMedicinePref {
   doctor Doctor @relation(fields: [doctorId], references: [id])
   @@id([doctorId, brandId])
   @@index([doctorId, isFavorite, lastUsedAt(sort: Desc)])
+}
+
+enum AdviceLanguage {
+  EN
+  MR
+  HI
+}
+model AdviceSnippet {
+  id String @id
+  doctorId String
+  language AdviceLanguage
+  text String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+  @@index([doctorId, language])
+}
+model TemplatePreference {
+  doctorId String
+  templateId String
+  isFavorite Boolean @default(false)
+  lastUsedAt DateTime?
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+  template DiseaseTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  @@id([doctorId, templateId])
 }

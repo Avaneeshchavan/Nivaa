@@ -20,7 +20,7 @@ export function strengthText(name: string) {
 export type BrandChoice = {
   id: string; brandId?: string; brandName?: string; name: string; generic: string | null; form: string | null
   manufacturer: string | null; strengthText?: string | null; system: string
-  composition?: string; isFavorite?: boolean; defaults?: Pick<DoctorMedicinePref, 'defaultPattern' | 'defaultFood' | 'defaultDurationDays' | 'defaultInstruction' | 'defaultDosage' | 'defaultFrequency' | 'defaultDuration'> | null
+  composition?: string; isFavorite?: boolean; defaults?: Pick<DoctorMedicinePref, 'defaultPattern' | 'defaultFood' | 'defaultDurationDays' | 'defaultInstruction' | 'defaultDoseUnit' | 'defaultDosage' | 'defaultFrequency' | 'defaultDuration'> | null
 }
 export function brandChoice(brand: Brand, pref?: DoctorMedicinePref | null): BrandChoice {
   return { id: brand.id, brandId: brand.id, brandName: brand.name, name: brand.name, generic: brand.compositionText || null,
@@ -28,7 +28,7 @@ export function brandChoice(brand: Brand, pref?: DoctorMedicinePref | null): Bra
     composition: brand.compositionText, system: brand.system === 'AYUSH' ? 'AYURVEDIC' : brand.system,
     isFavorite: pref?.isFavorite || false, defaults: pref ? {
       defaultPattern: pref.defaultPattern, defaultFood: pref.defaultFood, defaultDurationDays: pref.defaultDurationDays,
-      defaultInstruction: pref.defaultInstruction, defaultDosage: pref.defaultDosage,
+      defaultInstruction: pref.defaultInstruction, defaultDoseUnit: pref.defaultDoseUnit, defaultDosage: pref.defaultDosage,
       defaultFrequency: pref.defaultFrequency, defaultDuration: pref.defaultDuration,
     } : null }
 }

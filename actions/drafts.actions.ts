@@ -38,3 +38,16 @@ export async function deleteRxDraft(key: string) {
     await prisma.rxDraft.deleteMany({ where: { doctorId: doctor.id, key } })
   })
 }
+
+export async function getRxDraftEnvelope(key:string){
+  return withSafeActionError('Draft request unavailable. Try again.',async()=>{
+    key=draftKeySchema.parse(key)
+    const doctor=await requireOwner(null)
+    const draft=await prisma.rxDraft.findUnique({where:{doctorId_key:{doctorId:doctor.id,key}}})
+    if(!draft)return null
+    const parsed=rxDraftSchema.safeParse(draft.payload)
+    if(!parsed.success)return null
+    if(parsed.data.patientId&&!await prisma.patient.findFirst({where:{id:parsed.data.patientId,doctorId:doctor.id},select:{id:true}}))return null
+    return{payload:parsed.data,updatedAt:draft.updatedAt.toISOString()}
+  })
+}

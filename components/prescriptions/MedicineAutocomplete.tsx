@@ -1,7 +1,9 @@
 'use client'
 
+import { startRxSearch, addedRxMedicine } from '@/lib/rx/metrics'
 import { useEffect, useRef, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
+import { cachedMedicines, cacheMedicines, clearMedicineCache } from '@/lib/medicines/session-cache'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,13 +14,13 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { useRxBuilderStore, type RxMedicine } from '@/stores/rxBuilderStore'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import DoseFields, { blankDose, type DoseValues } from './DoseFields'
+import { defaultDoseUnit, doseUnits, parseDosePattern, quantityForPattern } from '@/lib/rx/dose'
 import CustomMedicineForm from './CustomMedicineForm'
 import type { BrandChoice } from '@/lib/medicines/brand'
 import { rememberMedicineUse, setMedicineFavorite } from '@/actions/brand-preferences.actions'
 
-export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxMedicine) => void } = {}) {
+export default function MedicineAutocomplete({ onAdd, doctorId, recentInstructions = [] }: { onAdd?: (medicine: RxMedicine) => void; doctorId?: string; recentInstructions?: string[] } = {}) {
   const [system, setSystem] = useState<'ALL' | 'ALLOPATHY' | 'AYURVEDIC' | 'OTHER'>('ALL')
   const [search, setSearch] = useState('')
   const [medicines, setMedicines] = useState<BrandChoice[]>([])
@@ -40,10 +42,12 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
     requestRef.current = controller
     setLoading(true)
     try {
+      const cached=cachedMedicines(doctorId,query,category)
+      if(cached && version===searchVersion.current){setMedicines(cached);return}
       const res = await fetch(`/api/medicines?q=${encodeURIComponent(query)}&system=${category}`, { signal: controller.signal, cache: 'no-store', redirect: 'error' })
       const data = await res.json()
       if (!res.ok || !Array.isArray(data)) throw new Error('Medicine search failed. Try again.')
-      if (version === searchVersion.current) setMedicines(data)
+      if (version === searchVersion.current) { cacheMedicines(doctorId,query,category,data); setMedicines(data) }
     } catch {
       if (!controller.signal.aborted && version === searchVersion.current) setError('Medicine search unavailable. Try again.')
     } finally {
@@ -53,6 +57,7 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
   useEffect(() => () => { requestRef.current?.abort(); fetchMedicines.cancel() }, [fetchMedicines])
 
   const handleSearch = (value: string) => {
+    if (value.trim()) startRxSearch()
     requestRef.current?.abort()
     setSearch(value)
     setError(null)
@@ -63,21 +68,22 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
   }
 
   // Inline form state
-  const [dosage, setDosage] = useState('')
-  const [frequency, setFrequency] = useState('BD')
-  const [duration, setDuration] = useState('5 Days')
-  const [instructions, setInstructions] = useState('')
-
+  const [dose, setDose] = useState<DoseValues>(blankDose)
+  const {dosage,frequency,duration,instructions} = dose
   const chooseMedicine = (medicine: BrandChoice) => {
     setSelectedMed(medicine)
-    setDosage(medicine.defaults?.defaultDosage || '')
-    setFrequency(medicine.defaults?.defaultFrequency || '')
-    setDuration(medicine.defaults?.defaultDuration || '')
-    setInstructions(medicine.defaults?.defaultInstruction || '')
+    const next: DoseValues = { ...blankDose, doseUnit:medicine.defaults?.defaultDoseUnit || defaultDoseUnit(medicine.form),
+      dosage:medicine.defaults?.defaultDosage||'', frequency:medicine.defaults?.defaultFrequency||'',
+      duration:medicine.defaults?.defaultDuration||'', instructions:medicine.defaults?.defaultInstruction||'',
+      pattern:medicine.defaults?.defaultPattern||'',food:medicine.defaults?.defaultFood||undefined,
+      durationDays:medicine.defaults?.defaultDurationDays||null,
+    }
+    next.quantity = next.doseUnit !== 'other' ? quantityForPattern(next.pattern || '', next.durationDays, next.frequency) : null
+    setDose(next)
   }
 
   const handleAdd = () => {
-    if (!selectedMed || !dosage.trim() || !frequency.trim() || !duration.trim()) return
+    if (!selectedMed || !dosage.trim() || !frequency.trim() || !duration.trim() || (dose.pattern && !parseDosePattern(dose.pattern))) return
 
     const commitMedicine = onAdd || addMedicine
     commitMedicine({
@@ -89,13 +95,13 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
       name: selectedMed.name,
       generic: selectedMed.generic,
       form: selectedMed.form,
-      dosage,
-      frequency,
-      duration,
-      instructions
+      ...dose,
+      quantity: dose.doseUnit && dose.doseUnit !== 'other' ? quantityForPattern(dose.pattern || '', dose.durationDays, dose.frequency) : null,
     })
 
-    if (!onAdd && selectedMed.brandId) void rememberMedicineUse({ brandId: selectedMed.brandId, dosage, frequency, duration, instructions })
+    if (!onAdd) addedRxMedicine()
+    if (!onAdd && selectedMed.brandId) void rememberMedicineUse({ brandId: selectedMed.brandId, dosage, frequency, duration, instructions, pattern:dose.pattern,food:dose.food,durationDays:dose.durationDays??null,doseUnit:dose.doseUnit as typeof doseUnits[number] })
+      .then(() => clearMedicineCache(doctorId))
       .catch(() => setNotice('Medicine added. Usual entries could not be remembered; try again next time.'))
 
     // Reset form
@@ -104,10 +110,7 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
     setSearch('')
     searchVersion.current += 1
     setMedicines([])
-    setDosage('')
-    setFrequency('BD')
-    setDuration('5 Days')
-    setInstructions('')
+    setDose(blankDose)
   }
 
   return (
@@ -129,12 +132,14 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
       {notice && <p role="status" className="rounded-lg border bg-secondary p-3 text-sm font-medium">{notice}</p>}
       {customName !== null ? <CustomMedicineForm initialName={customName} initialSystem={system === 'AYURVEDIC' ? 'AYURVEDIC' : 'ALLOPATHY'}
         onCancel={() => setCustomName(null)} onCreated={({ medicine, alreadyExists }) => {
+          clearMedicineCache(doctorId)
           setCustomName(null)
           setNotice(alreadyExists ? `Already exists: ${medicine.name}` : `Added: ${medicine.name}`)
           chooseMedicine(medicine)
         }} /> : !selectedMed ? (
         <Command shouldFilter={false} className="rounded-xl border border-input bg-card">
           <CommandInput
+            maxLength={100}
             aria-label="Search for a medicine"
             placeholder="Search brand, generic or company"
             value={search}
@@ -197,59 +202,14 @@ export default function MedicineAutocomplete({ onAdd }: { onAdd?: (medicine: RxM
           {selectedMed.brandId && <Button type="button" variant="outline" disabled={favoriteBusy} aria-pressed={selectedMed.isFavorite || false}
             onClick={async () => {
               setFavoriteBusy(true)
-              try { await setMedicineFavorite(selectedMed.brandId!, !selectedMed.isFavorite); setSelectedMed(current => current?.id === selectedMed.id ? { ...current, isFavorite: !selectedMed.isFavorite } : current) }
+              try { clearMedicineCache(doctorId); await setMedicineFavorite(selectedMed.brandId!, !selectedMed.isFavorite); setSelectedMed(current => current?.id === selectedMed.id ? { ...current, isFavorite: !selectedMed.isFavorite } : current) }
               catch { setError('Could not update favorite. Try again.') }
               finally { setFavoriteBusy(false) }
             }}>{selectedMed.isFavorite ? '★ Remove favorite' : '☆ Add favorite'}</Button>}
           <p className="text-sm text-muted-foreground">Review the form, strength and composition before adding. Usual entries are recalled from your own use.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label htmlFor="rx-med-dosage" className="text-base font-medium">Dosage</label>
-              <Input
-                autoFocus
-                placeholder="e.g. 500mg, 1 tablet"
-                id="rx-med-dosage" value={dosage}
-                onChange={(e) => setDosage(e.target.value)}
-                className="h-12"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="rx-med-frequency" className="text-base font-medium">Frequency</label>
-              <Select value={frequency} onValueChange={(val) => { if (val) setFrequency(val) }}>
-                <SelectTrigger id="rx-med-frequency" className="h-12 w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="OD">OD (Once daily)</SelectItem>
-                  <SelectItem value="BD">BD (Twice daily)</SelectItem>
-                  <SelectItem value="TDS">TDS (Thrice daily)</SelectItem>
-                  <SelectItem value="QID">QID (Four times daily)</SelectItem>
-                  <SelectItem value="SOS">SOS (As needed)</SelectItem>
-                  <SelectItem value="HS">HS (At bedtime)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="rx-med-duration" className="text-base font-medium">Duration</label>
-              <Input
-                placeholder="e.g. 5 Days, 1 Month"
-                id="rx-med-duration" value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                className="h-12"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="rx-med-instructions" className="text-base font-medium">Instructions</label>
-              <Input
-                placeholder="e.g. After food"
-                id="rx-med-instructions" value={instructions}
-                onChange={(e) => setInstructions(e.target.value)}
-                className="h-12"
-              />
-            </div>
-          </div>
+          <DoseFields value={dose} onChange={setDose} recentInstructions={recentInstructions}/>
 
-          <Button type="button" onClick={handleAdd} className="w-full h-12 gap-2" disabled={!dosage.trim() || !frequency.trim() || !duration.trim()}>
+          <Button type="button" onClick={handleAdd} className="w-full h-12 gap-2" disabled={!dosage.trim() || !frequency.trim() || !duration.trim() || Boolean(dose.pattern && !parseDosePattern(dose.pattern))}>
             <Plus className="w-4 h-4" /> Add to Prescription
           </Button>
         </div>

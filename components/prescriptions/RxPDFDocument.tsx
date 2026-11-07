@@ -1,3 +1,4 @@
+import { medicineInstructions } from '@/lib/rx/dose'
 /* eslint-disable jsx-a11y/alt-text */
 import { Document, Page, Text, View, StyleSheet, Image, Font, Svg, Path } from '@react-pdf/renderer'
 import { formatVisitMeasurements, type VisitMeasurements } from '@/lib/validations/visit.schema'
@@ -16,6 +17,9 @@ interface RxMedicine {
   dosage: string
   frequency: string
   duration: string
+  food?: import('@/lib/rx/dose').Food
+  quantity?: number | null
+  doseUnit?: string
   instructions?: string | null
 }
 
@@ -63,7 +67,7 @@ interface RxPDFProps {
   visit?: VisitMeasurements | null
   doctor: Pick<Doctor, 'name' | 'email'> & Partial<Pick<Doctor, 'license' | 'address' | 'phone'>>
   patient: Pick<Patient, 'name' | 'dob' | 'gender' | 'phone' | 'allergies'>
-  prescription: Pick<Prescription, 'id' | 'createdAt' | 'diagnosis' | 'notes'> & { medicines: unknown; handwriting?: unknown }
+  prescription: Pick<Prescription, 'id' | 'createdAt' | 'diagnosis' | 'notes'> & { medicines: unknown; handwriting?: unknown; followUpDate?: Date | string | null }
   clinicName?: string
   handwritingPhoto?: string
   signatureUrl?: string
@@ -148,12 +152,13 @@ export default function RxPDFDocument({ doctor, patient, prescription, clinicNam
                   <View style={styles.tableCol}><Text style={styles.tableCell}>{med.dosage}</Text></View>
                   <View style={styles.tableCol}><Text style={styles.tableCell}>{med.frequency}</Text></View>
                   <View style={styles.tableColWide}><Text style={styles.tableCell}>{med.duration}</Text></View>
-                  <View style={styles.tableColWide}><Text style={styles.tableCell}>{med.instructions || ''}</Text></View>
+                  <View style={styles.tableColWide}><Text style={styles.tableCell}>{medicineInstructions(med)}{med.quantity != null && med.doseUnit ? ` · Total: ${med.quantity} ${med.doseUnit}` : ''}</Text></View>
                 </View>
               ))}
             </View>
           </View>
         )}
+        {prescription.followUpDate && <Text style={{ marginTop: 8 }}>Follow-up: {new Date(prescription.followUpDate).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' })}</Text>}
         {/* Notes */}
         {prescription.notes && (
           <View>

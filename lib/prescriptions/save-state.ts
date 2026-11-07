@@ -23,7 +23,7 @@ export function rxSaveReason(state: SaveState): string | null {
   const payload = prescriptionSchema.safeParse({ ...state, visit: visit.data })
   if (!payload.success) {
     const field = payload.error.issues[0]?.path[0]
-    const label = field === 'medicines' ? 'medicine entries' : field === 'notes' ? 'notes and advice' : field === 'diagnosis' ? 'diagnosis' : 'handwritten notes'
+    const label = field === 'medicines' ? 'medicine entries' : field === 'notes' ? 'notes and advice' : field === 'followUpDate' ? 'follow-up date' : field === 'diagnosis' ? 'diagnosis' : 'handwritten notes'
     return `Check ${label} before saving (an entry is invalid or too long).`
   }
   return null

@@ -13,7 +13,7 @@ const PDFViewer = dynamic(() => import('./PDFViewerWrapper'), {
 })
 
 export default function RxPreview({ patient, doctor, paperSize }: { patient?: PrescriptionPatient; doctor: Doctor; paperSize: 'A4' | 'A5' }) {
-  const { diagnosis, medicines, notes, visit, handwriting } = useRxBuilderStore()
+  const { diagnosis, medicines, notes, visit, handwriting, followUpDate } = useRxBuilderStore()
   const [assets, setAssets] = useState<{ logoUrl?: string; signatureUrl?: string } | null>(null)
   const [photo, setPhoto] = useState<{ id: string; data: string } | null>(null)
   const [error, setError] = useState('')
@@ -48,7 +48,7 @@ export default function RxPreview({ patient, doctor, paperSize }: { patient?: Pr
     <h2 className="border-b p-4 text-lg font-semibold">Live print preview</h2>
     <PDFViewer className="h-full w-full flex-1 border-0">
       <RxPDFDocument doctor={doctor} patient={patient || { name: 'Select a patient', dob: null, phone: null, gender: null, allergies: null }}
-        prescription={{ diagnosis, medicines, notes, handwriting, createdAt: new Date(), id: 'DRAFT' }}
+        prescription={{ diagnosis, medicines, notes, handwriting, followUpDate: followUpDate || null, createdAt: new Date(), id: 'DRAFT' }}
         visit={measurements.success ? measurements.data : undefined} clinicName={doctor.clinicName || 'Clinic'}
         {...assets} handwritingPhoto={photo?.data} paperSize={paperSize} />
     </PDFViewer>
