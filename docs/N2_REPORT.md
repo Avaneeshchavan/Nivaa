@@ -46,3 +46,15 @@ The remembered N1 usual values are learned when adding a brand in the picker. La
 5. Capture the real performance and iPad/Safari acceptance listed in PERF_BUDGET.md. Use synthetic records and avoid PHI in exported traces/screenshots.
 
 Release details and post-deploy checks are recorded below after the deployment completes. Stop here; N3 requires user review.
+
+## Production release
+
+November 7, 2026: application commit `d254e5a` pushed on `v2/rx-builder` to `https://github.com/Avaneeshchavan/Nivaa.git` and deployed through the existing Vercel project/account/environment. Deployment `dpl_7Q6nttfqe5kL9hkGwLhoC488cZu2` is Ready, with functions in `bom1` (Mumbai).
+
+- Production: https://nivaa-kohl.vercel.app
+- Immutable deployment: https://nivaa-8ksyxicfv-avaneeshchavans-projects.vercel.app
+- Post-release: all 15 public/anonymous smoke checks and all eight signed-out redirect checks passed on the production alias. The same checks passed on the local production build before release.
+
+Deployment used a clean Git archive of committed source, excluding every .env file and ignored raw source package. Existing production variables were reused; no secret, provider plan, dependency, auth or Storage configuration was changed. The temporary local server was stopped. A documentation-only follow-up commit records these release results and does not need an application redeploy.
+
+N2 implementation/release complete; device/performance and advice review remain the explicit checkpoint. N3 was not started.

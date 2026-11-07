@@ -59,4 +59,5 @@ N1 is implemented on v2/brand-catalog; doctor/device acceptance is pending. N3â€
 - [x] N2 implementation: dose/quantity controls, repeat/confirmation, touch/keyboard order + bounded undo, diagnosis/templates, advice/follow-up, local+cloud drafts and isolated sections. See docs/N2_REPORT.md.
 - [x] N2 database: additive migration applied, 60 reviewable snippets per doctor, private workflow tables; existing catalog preserved.
 - [x] N2 automated verification: TypeScript, production build, 27 regression suites and synthetic core benchmark. See docs/PERF_BUDGET.md.
+- [x] N2 release: d254e5a deployed to the existing production app, Ready in Mumbai; 15 public smoke + eight redirect checks passed. See docs/N2_REPORT.md.
 - [ ] N2 rendered/performance acceptance: actual Profiler/input/add-four/save timings and iPad/Safari workflow checks blocked by browser integration. Doctors must review advice; stop before N3.
